@@ -125,9 +125,9 @@ class update(object):
 				try:
 					pid = open('./oneline.pid.txt', 'r+').read()
 
-					if re.findall(r'Linux|Cygwin|Mac', platform.system, re.IGNORECASE):
+					if len(re.findall(r'Linux|Cygwin|Mac', platform.system(), re.IGNORECASE)) > 0:
 						os.system("kill " + str(pid))
-					elif platform == 'Windows':
+					else:
 						kill(pid)
 
 					subprocess.Popen(["python", prefix + "server.py"])

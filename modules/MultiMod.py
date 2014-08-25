@@ -7,20 +7,28 @@
 ##############################################################################
 
 from oneline import ol
+import GeoMod
 
 class MultiMod(ol.module):
     def start(self):
     	db = ol.storage()
     	geo = ol.geo()
     	ev = ol.event()
+        print "Changing the order of geo and ev "
 
-        self.pipeline = ol.stream(pline=[geo, ev], db=db)
+        self.pipeline = ol.stream(pline=[ev, geo], db=db)
 
     def receiver(self, message):
         self.pipeline.run(message) 
+
+    def upstream(self, message):
+        geo = GeoMod()
+
+        geo.open()
 
     def provider(self, message):
     	self.pipeline.run(message)
 
     def end(self):
+        print "closing multimod :("
         del self.pipeline

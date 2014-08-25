@@ -29,7 +29,7 @@ Geo Examples
 		class GeoMod
 			opened: (message) ->
 				ol.settings(module: 'GeoMod')
-				geo = ol.geo(every: 5000)
+				geo = ol.geo(range: 50.030303)
 				
 				this.pipeline = ol.stream(pipeline: [geo])
 		     

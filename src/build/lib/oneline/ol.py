@@ -581,13 +581,16 @@ Websocket
 """
 class module(WebSocket):
 	def opened(self):
-		return self.start()
+		if 'start' in dir(self):
+			return self.start()
 
 	def closed(self, *args):
-		return self.end()
+		if 'end' in dir(self):
+			return self.end()
 
 	def received_message(self, m):
-		return self.receiver(m)
+		if 'receiver' in dir(self):
+			return self.receiver(m)
 
 """
 agent definition
