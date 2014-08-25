@@ -52,5 +52,5 @@ python ./setup.py install
 :: the server 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-cd %ONELINE_BASE%
-run-server.bat
+cd %ONELINE_BASE%/bin/
+onelined /start

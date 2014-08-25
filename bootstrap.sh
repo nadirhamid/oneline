@@ -54,5 +54,5 @@ python ./setup.py install
 ## the server 
 ########################################################################
 
-cd $ONELINE_BASE
+cd $ONELINE_BASE/bin/
 ./bin/onelined.sh --start
