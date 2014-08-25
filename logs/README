@@ -1,0 +1,7 @@
+All oneline logging will be stored here. Logs are stored
+in the following format: 
+
+{module_name}_{date}.log
+
+In each of these files you will find the errors, warnings
+and client connection attempts and failures

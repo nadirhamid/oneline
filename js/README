@@ -1,0 +1,15 @@
+Readme
+---------------------------------------------------------------------
+
+In this directory you will find a minified and documented
+version of oneline's javascript. In order to include this, 
+you'll have to move it to a directory on your web server. 
+Afterwards you can include it, like so:
+
+<script type="text/javascript" src="/oneline.0.1.0.min.js">
+
+or 
+
+<script type="text/javascript" src="/oneline.0.1.0.js">
+
+--------------------------------------------------------------------

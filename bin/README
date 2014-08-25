@@ -1,0 +1,18 @@
+Binaries
+----------------------------------------------------------------------
+
+These are actually not binaries and simply shell/batch scripts used
+to run or stop oneline.
+
+---------------------------------------------------------------------
+
+To run:
+
+./onelined.sh --start
+or (windows)
+./onelined.bat /start
+
+Stopping:
+
+./onelined.sh --stop
+./onelined.sh /stop
