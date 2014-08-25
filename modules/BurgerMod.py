@@ -10,8 +10,6 @@ from oneline import ol
 
 class BurgerMod(ol.module):
     def start(self):
-
-    	
     	self.pipeline = ol.stream()
     	
     def receiver(self, message):

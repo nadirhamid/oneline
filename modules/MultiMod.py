@@ -21,3 +21,6 @@ class MultiMod(ol.module):
 
     def provider(self, message):
     	self.pipeline.run(message)
+
+    def end(self):
+        del self.pipeline
