@@ -55,4 +55,4 @@ python ./setup.py install
 ########################################################################
 
 cd $ONELINE_BASE/bin/
-./bin/onelined.sh --start
+./onelined --start
