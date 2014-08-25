@@ -13,7 +13,8 @@
 ## libraries.
 ########################################################################
 
-ONLINE_BASE=$(pwd)
+ONELINE_BASE=$(pwd)
+
 cd $ONELINE_BASE/lib/bson/
 python ./setup.py build
 python ./setup.py install

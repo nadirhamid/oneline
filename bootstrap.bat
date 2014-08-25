@@ -14,7 +14,8 @@
 :: libraries.
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-SET ONLINE_BASE=%cd%
+SET ONELINE_BASE=%cd%
+
 cd %ONELINE_BASE%/lib/database/mysql-connector/
 python ./setup.py build
 python ./setup.py install
