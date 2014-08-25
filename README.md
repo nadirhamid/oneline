@@ -121,8 +121,8 @@ modules. Like so:
 		db_commit_timeout = 3600
 		
 		
-3. Every module uses three methods that are unique to oneline -- these are
-<i>opened</i>, <i>received_message</i> and <i>provide_message</i>. Like there name suggests they
+3. Every module uses four methods that are unique to oneline -- these are
+<i>start</i>, <i>receiver</i> and <i>provider</i> and <i>end</i>. Like there name suggests they
 open, receive and provide messages to the websocket connection.
 
 4. All modules need one major table to extract data from, this will be the
