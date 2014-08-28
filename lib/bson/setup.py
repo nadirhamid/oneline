@@ -5,9 +5,9 @@
 
 from setuptools import setup, find_packages
 
-setup(name = "bson",
+setup(name = "bsonlib",
 		version="0.3.3",
-		packages=["bson"],
+		packages=["bsonlib"],
 		install_requires = ["pytz>=2010b"],
 		author = "Kou Man Tong",
 		author_email = "martinkou@tixxme.com",

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-import bson
 import json
+import bsonlib
 import operator
 import hashlib 
 import ast
@@ -692,7 +692,7 @@ class pipeline(object):
 			ensure the message fits in
 			"""
 
-			m = bson.loads(bytearray(literal).__str__())
+			m = bsonlib.loads(bytearray(literal).__str__())
 			is_json = False
 
 		if self._objs == '':
@@ -767,7 +767,7 @@ class pipeline(object):
 		if is_json:
 			bytes = json.dumps(m)
 		else:
-			bytes = map(ord, bson.dumps(m)).__str__()
+			bytes = map(ord, bsonlib.dumps(m)).__str__()
 
 
 		client.send(bytes)
