@@ -114,6 +114,75 @@ def caller_name(skip=2):
     return ".".join(name)
 
 """
+scan the whole config aside from the
+database settings.
+"""
+def scan_config(caller):
+
+	config = dict()
+	proto = re.findall(r'([\w\_]+)\.', caller)
+
+	if len(proto) > 0:
+		config['module'] = proto[0]
+		config_name = proto[0] + '.conf'
+	else:
+		config_name = ''
+
+	try:
+		if os.path.exists('../../conf/'):
+			os.chdir('../../conf')
+			prefix = '../../conf'
+
+			if os.path.isfile(config_name):
+				has_config = True
+				f = open(config_name, 'r+').read()
+
+		elif os.path.exists('../conf/'):
+			os.chdir('../conf')
+			prefix = '../conf'
+
+			if os.path.isfile(config_name):
+				has_config = True
+				f = open(config_name, 'r+').read()
+
+		elif os.path.exists('./conf/'):
+			os.chdir('./conf')
+			prefix = './conf'
+			if os.path.isfile(config_name):
+				has_config = True
+				f = open(config_name, 'r+').read()
+		else:
+			os.chdir('../../conf')
+			prefix = '../../conf'
+
+			if os.path.isfile(config_name):
+				has_config = True
+				f = open(config_name, 'r+').read()
+	except:
+		pass
+	pass
+
+	if not has_config:
+		"""
+		if we couldn't find a config file
+		resort to properties in default config
+		"""
+		if conf:
+			pass	
+		pass
+	else:
+		try:
+			config['broadcast'] = re.findall("ol_broadcast\s+\=\s+\'(.*)\'", f)[0]
+		except:
+			pass
+
+	print config['module'] + '"s config'
+	print config
+
+	return config
+
+
+"""
 start the streaming
 process
 """
@@ -123,7 +192,7 @@ def stream(agent='', pline='', db=''):
 	if db == '':
 		db = storage(caller=caller_name())
 
-	return pipeline(pline, db, obj)
+	return pipeline(pline, db, obj, scan_config(caller_name()))
 
 class _server(object):
 	def __init__(self, host, port, ssl=False):
@@ -178,7 +247,10 @@ class plugin(WebSocketPlugin):
         self.bus.unsubscribe('del-client', self.del_client)
  
     def add_client(self, name, websocket):
-        self.clients[name] = websocket
+    	if not name in self.clients.keys():
+    		self.clients[name] = []
+
+       	self.clients[name].append(websocket)
  
     def get_client(self, name):
         return self.clients[name]
@@ -336,6 +408,7 @@ class server(object):
 							  	    'request.module_md5': hashlib.md5(f).hexdigest(),
 							  	    'request.module_ctime': os.path.getmtime(i),
 							  	    'request.module_object': module,
+							  	    'request.module_uuid': uuid.uuid4().__str__(),
 				              		'tools.websocket.handler_cls': getattr(module, module_name) }
 
 
@@ -345,6 +418,7 @@ class server(object):
 										  'request.module_md5': hashlib.md5(f).hexdigest(),
 										  'request.module_ctime': os.path.getmtime(i),
 										  'request.module_object': module,
+								  	      'request.module_uuid': uuid.uuid4().__str__(),
 				              		   	  'tools.websocket.handler_cls': getattr(module, module_name) }
 
 		os.chdir(curr)
@@ -632,11 +706,17 @@ properties intact
 class pipeline(object):
 	global OBJS
 
-	def __init__(self, objects, storage, caller):
+	def __init__(self, objects, storage, caller, config):
 		self._objs = objects		
 		self.storage = storage
 		self.caller = caller
-		self.caller.unique = uuid.uuid4()
+		self.config = config
+
+		if not 'broadcast' in self.config.keys() or self.config['broadcast'] == 'singular':
+			self.caller.unique = uuid.uuid4().__str__()
+		else:
+			""" use the same unique id as the modules registered one """
+			self.caller.unique = cherrypy.config['/' + config['module']]['request.module_uuid']
 
 		self.setup()
 
@@ -770,7 +850,8 @@ class pipeline(object):
 			bytes = map(ord, bsonlib.dumps(m)).__str__()
 
 
-		client.send(bytes)
+		for i in client:
+			i.send(bytes)
 
 		try:
 			inspect.currentframe().f_back.f_locals['self'].provider(bytes)

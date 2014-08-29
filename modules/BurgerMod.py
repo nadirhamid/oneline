@@ -14,11 +14,11 @@ class BurgerMod(ol.module):
     	self.pipeline = ol.stream()
     	
     def receiver(self, message):
-        print "i am receiving data"
+        print "Hello" + self.unique
     	self.pipeline.run(message)
 
     def provider(self, message):
-        print "i am providing data!"
+        print " am providing data to: " + self.unique
  
     def end(self):
     	print "i am closing a connection and cleaning up your leftover data"

@@ -94,6 +94,7 @@ To include the client side library
 	from the CDN:
 	<script type="text/javascript" src="http://cdn.getoneline.com/lib/oneline.min.0.5.0.js">
 
+
 	or locally
 	<script type="text/javascript" src="/oneline.0.1.0.min.js">
 
