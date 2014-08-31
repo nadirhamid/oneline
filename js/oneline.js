@@ -29,9 +29,21 @@
    */
   navigator = window.navigator ? window.navigator : [];
 
+  window.BSON = window.BSON || bson().BSON;
+
+  /* convinience for BSON -- it will delegate to JSON
+   * when needed.
+   */
+  BSON.stringify = function(packet) { return O.uint8ToString(BSON.serialize(packet)); };
+  BSON.parse = function(message) { return BSON.deserialize(O.stringToUint8(message)); };
+
+  Oneline.interop = BSON;
   Oneline.socket = Oneline.socket || [];
   Oneline.settings = Oneline.settings || {};
   Oneline.freq = Oneline.freq = Oneline.freq || 1000;
+  Oneline.host = Oneline.host || 'localhost';
+  Oneline.port = Oneline.port || 9000;
+  Oneline.protoline = Oneline.protoline || [];
   Oneline.loaded = 0;
 
   /* setup online with the 
@@ -41,10 +53,20 @@
    */
   Oneline.setup = function(options) {
       Oneline.settings = options;
+      Oneline.port = options.port || Oneline.port;
+      Oneline.host = options.host || Oneline.host;
+      options.server = options.module || options.server;
+
+      if (options.server.match(/ws\:\/\//))
+        Oneline.settings.server = options.server;
+      else
+        Oneline.settings.server = options.server = 'ws://' + Oneline.host + ':' + Oneline.port + '/' + options.server;
+
       Oneline.socket = window.WebSocket ? new window.WebSocket(options.server) : MozWebSocket(options.server); 
+      Oneline.interop = typeof options.interop !== 'undefined' ? options.interop === 'json' ? JSON : BSON : BSON;
       Oneline.freq = typeof options.freq !== 'undefined' ? options.freq : Oneline.freq;
       Oneline.socket.onopen = function() { Oneline.loaded = 1; };       
-      Oneline.socket.onmessage = function(evt) { console.log(JSON.parse(evt.data)); };
+      Oneline.socket.onmessage = function(evt) { console.log(O.interop.parse(evt.data)); };
 
       /* onclose try to reestablish
        * the connection
@@ -62,6 +84,13 @@
   Oneline.nodes = function(options) {
   };
 
+  Oneline.stream = function(options) {
+    options = options || {};
+    options.pipeline = options.pipeline || O.protoline;
+
+    return O.pipeline({}, options.pipeline, function(res) { console.log(res); } ).run(); 
+  };
+
   /* simple class for 
    * values with operands
    * @class
@@ -70,10 +99,19 @@
       return { 'op': op, 'value': val };
   };
 
+  /* get an elapse
+   * of time and convert it 
+   * to an integer
+   * @class
+   */
+  Oneline.moment = function(start, end) {
+      return { 'start': 0000, 'end': 3600 };
+  };
+
   /* geolocation module
    * @class
    */
-  Oneline.geolocation = function(options) {
+  Oneline.geolocation = Oneline.geo = function(options) {
       Oneline.geolocation.options = options;
 
       return {
@@ -86,16 +124,17 @@
            */
           run: function(m) 
           {
-              this.m = {};
+              this.m = m || {};
+              this.m.geo = {};
               this.state = 0;
-              this.every = O.geolocation.options.every;
-              this.range = O.geolocation.options.range;
+              this.m.geo.every = O.geolocation.options.every;
+              this.m.geo.range = O.geolocation.options.range;
               var that = this;
 
               navigator.geolocation.getCurrentPosition(function(res) {
-                  that.m.lat = res.coords.longitude;
-                  that.m.lng = res.coords.latitude;
-                  that.m.range = O.geolocation.options.range;
+                  that.m.geo.lat = res.coords.longitude;
+                  that.m.geo.lng = res.coords.latitude;
+                  that.m.geo.range = O.geolocation.options.range;
                   that.state = 1;
               });
           }
@@ -116,7 +155,7 @@
            */
           run: function(m) 
           {
-              this.m = {};
+              this.m = m || {};
               this.m.event = Oneline.event.options;
 
               this.state = 1;
@@ -124,12 +163,35 @@
       }
   };
 
+
+  /* time module
+   * @class
+   */
+   Oneline.time = function(options) {
+      Oneline.time.options = options;
+
+      return {
+
+          run: function(m)
+          {
+              this.m = m || {};
+              this.m.time = {};              
+
+              this.m.time.start = Oneline.time.options.moment.start;
+              this.m.time.end = Oneline.time.options.moment.end;
+
+              this.state = 1;
+          }
+      };
+   };
+
   /* pipeline module
    * @class
    */
   Oneline.pipeline = function(agent, objects, callback) {
       O.objects = objects;
       O.callback = callback;
+      O.protoline.push(this);
 
       return {
 
@@ -164,6 +226,7 @@
                   }
 
                   O.running = 1;
+                  O.socket.onmessage = function(evt) { return O.callback(O.interop.parse(evt.data)); };
 
                   var m = {}, c = 0, m_ = {}, ii = 0, t, i = 0;
 
@@ -206,9 +269,10 @@
 
                           t = new Date().getTime();
                           m_.packet.timestamp = t; 
+                          m_.packet.interop = O.interop;
                           m_.uuid = O.uuid();
 
-                          O.socket.send(JSON.stringify(m_));
+                          O.socket.send(O.interop.stringify(m_));
 
                           if (typeof O.callback === 'function')
                               O.callback(m_);
@@ -261,6 +325,34 @@
   {
       return ("0000" + (Math.random()*Math.pow(36,4) << 0).toString(36)).slice(-4)
   };
+
+  /* convert a uint8 array to a string
+   * useful for bson interchange
+   *
+   */
+  Oneline.uint8ToString = function(arr)
+  {
+      var o = "[";
+
+      for (var i in arr)
+          o += i == arr.length - 1? arr[i].toString() + "]" : arr[i].toString() + ", ";
+
+      return o;
+  };
+
+  /* opposite of uint8tostring
+   * this assumes the given string is already
+   * in uint8 format
+   */
+  Oneline.stringToUint8 = function(str)
+  {
+      var ds = str.match(/(\d+)/g), o = [];
+
+      for (var i = 0; i != ds.length; i ++)
+        o.push(parseInt(ds[i]));
+
+      return o;
+  }; 
  
   /* method borrowed from 'Bjorn' 
    * it will merge object properties into
@@ -279,6 +371,6 @@
   /* Assign the global object for oneline
    * @shortcut O -> Oneline object
    */
-  window.O = Oneline;
+  window.O = window.ol = Oneline;
 
 }).call(this);

@@ -1,4 +1,4 @@
-Oneline  (A Python Project) 
+Oneline  (A Python Project) [![Build Status][travis-image]][travis-url] 
 =========================================================
 
 Oneline adds real time streaming to your web app's data
