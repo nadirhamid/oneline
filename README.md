@@ -1,5 +1,6 @@
-Oneline  (A Python Project) [![Build Status][travis-image]][travis-url] 
+Oneline  (A Python Project)
 =========================================================
+![alt tag](http://getoneline.com/oneline.png)
 
 Oneline adds real time streaming to your web app's data
 
