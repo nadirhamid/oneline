@@ -8,18 +8,18 @@
 
 from oneline import ol
 
-class ChatMod(ol.module):
+class GeoTimeMod(ol.module):
     def start(self):
-        """ starting chat module """
-    	self.pipeline = ol.stream()
+    	geo = ol.geo()
+    	time = ol.time()
 
-        print "connected: " + self.unique
+    	self.pipeline = ol.stream(pline=[time, geo])
     	
     def receiver(self, message):
-    	self.pipeline.store(message)
+    	self.pipeline.run(message)
 
     def provider(self, message):
-        pass
- 
+    	pass
+
     def end(self):
-        del self.pipeline
+    	print "closed GeoTimeMod"

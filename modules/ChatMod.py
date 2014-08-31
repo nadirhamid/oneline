@@ -16,10 +16,12 @@ class ChatMod(ol.module):
         print "connected: " + self.unique
     	
     def receiver(self, message):
-    	self.pipeline.store(message)
+    	self.pipeline.run(message)
 
     def provider(self, message):
         pass
  
     def end(self):
+    	print "i am closing a connection and cleaning up your leftover data"
+
         del self.pipeline

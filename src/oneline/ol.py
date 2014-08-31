@@ -17,6 +17,7 @@ import re
 import sys
 import cherrypy
 import uuid
+import time as _time
 
 from dal import DAL, Field
 from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
@@ -48,7 +49,10 @@ OPS = {
 	  } 
 OBJS = [
 			"geo",
-			"event"
+			"event",
+			"echo",
+			"time",
+			"writer"
 	   ]
 
 """
@@ -173,12 +177,27 @@ def scan_config(caller):
 	else:
 		try:
 			config['broadcast'] = re.findall("ol_broadcast\s+\=\s+\'(.*)\'", f)[0]
+			frequency = re.findall("ol_freq\s+\=\s+\'(.*)\'", f)
+
+			if frequency:
+				config['freq'] = frequency[0]
+
+			logging = re.findall("ol_logging\s+\=\s+\'(.*)\'", f)
+
+			if logging:
+				config['logging'] = logging[0]
+
+			memcache = re.findall("ol_memcache\s+\=\s+\'(.*)\'", f)
+
+			if memcache:
+				config['memcache'] = True
+			else:
+				config['memcache'] = False
+
 		except:
 			pass
 
-	print config['module'] + '"s config'
 	print config
-
 	return config
 
 
@@ -711,12 +730,18 @@ class pipeline(object):
 		self.storage = storage
 		self.caller = caller
 		self.config = config
+		self.blob = []
 
 		if not 'broadcast' in self.config.keys() or self.config['broadcast'] == 'singular':
 			self.caller.unique = uuid.uuid4().__str__()
 		else:
 			""" use the same unique id as the modules registered one """
 			self.caller.unique = cherrypy.config['/' + config['module']]['request.module_uuid']
+
+		if not 'freq' in self.config.keys():
+			self.caller.freq = 0
+		else:
+			self.caller.freq = int(self.config['freq'])
 
 		self.setup()
 
@@ -858,6 +883,8 @@ class pipeline(object):
 		except:
 			pass
 
+		_time.sleep(self.caller.freq)
+
 """
 oneline's logger
 all logs should be stored
@@ -944,6 +971,51 @@ class geolocation(object):
 						message['data'][k]['confidence'] = 0
 
 			return message['data']					
+
+
+class time(object):
+	def __init__(self):
+		pass
+
+	def errors(self):
+		pass
+
+	def run(self, message):
+		start = int(message['packet']['time']['start'])
+		end = int(message['packet']['time']['end'])
+		_OL_DB = self.storage.get()['db']
+		_OL_TABLE = self.storage.get()['table']
+
+		if not 'data' in message.keys():
+			queries = []
+
+			queries.append(getattr(getattr(_OL_DB, _OL_TABLE), 'stime') >= start)
+			queries.append(getattr(getattr(_OL_DB, _OL_TABLE), 'etime') <= end)
+
+			query = reduce(lambda a,b:(a&b),queries)
+			rows = _OL_DB(query).select()
+
+			return rows.as_list()
+			
+		else:
+			for k in range(0, len(message['data'])):
+				if int(message['data'][k]['stime']) >= start and \
+				   int(message['data'][k]['etime']) <= end:
+					if not 'confidence' in message['data'][k].keys():
+						message['data'][k]['confidence'] = 1
+					else:
+						message['data'][k]['confidence'] += 1
+				else:
+						message['data'][k]['confidence'] = 0
+
+			return message['data']					
+
+
+class writer(object):
+	pass
+
+class echo(object):
+	pass
 
 """
 the event object should find any key value constraints that are 
