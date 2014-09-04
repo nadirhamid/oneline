@@ -33,6 +33,9 @@ python ./setup.py install
 cd $ONELINE_BASE/lib/mock/
 python ./setup.py build
 python ./setup.py install
+cd $ONELINE_BASE/lib/memcache/
+python ./setup.py build
+python ./setup.py install
 cd $ONELINE_BASE/lib/cherrypy 
 python ./setup.py build 
 python ./setup.py install

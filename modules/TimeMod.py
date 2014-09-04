@@ -8,15 +8,17 @@
 
 from oneline import ol
 
-class BurgerMod(ol.module):
+class TimeMod(ol.module):
     def start(self):
         """ starting chat module """
     	self.pipeline = ol.stream()
+        print "Running module: " + self.__str__()
 
-        print "connected: " + self.unique
-        
     def receiver(self, message):
     	self.pipeline.run(message)
 
     def provider(self, message):
         pass
+
+    def end(self):
+        print "Closing module: " + self.__str__()

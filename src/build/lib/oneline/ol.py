@@ -12,6 +12,8 @@ import thread
 import random
 import weakref
 import string
+import memcache
+import datetime
 import os
 import re
 import sys
@@ -132,6 +134,8 @@ def scan_config(caller):
 	else:
 		config_name = ''
 
+	curr = os.getcwd()
+
 	try:
 		if os.path.exists('../../conf/'):
 			os.chdir('../../conf')
@@ -191,11 +195,14 @@ def scan_config(caller):
 
 			if memcache:
 				config['memcache'] = True
+				config['memcache_client'] = memcache.Client(['127.0.0.1:11211'], debug=0)
 			else:
 				config['memcache'] = False
 
 		except:
 			pass
+
+	os.chdir(curr)
 
 	print config
 	return config
@@ -277,64 +284,6 @@ class plugin(WebSocketPlugin):
     def del_client(self, name):
         del self.clients[name]
 
-"""
-if the modules snapshot changes recompile any
-newly added modules.
-"""
-def update_ol():
-	global _OL_SERVER
-
-	curr = os.getcwd()
-
-	oldsalt = cherrypy.config['request.modules_md5_snapshot']
-
-	if os.path.exists('../../modules/'):
-		os.chdir('../../modules')
-		files = os.listdir('./')
-	elif os.path.exists('../modules/'):
-		os.chdir('../modules')
-		files = os.listdir('./')		
-	elif os.path.exists('./modules/'):
-		os.chdir('./modules')
-		files = os.listdir('./')
-	else:
-		os.chdir('../../modules')
-		files = os.listdir('./')
-
-	salt = ''
-
-	for i in files:
-
-		if len(re.findall('\.pyc', i)) > 0:
-			continue
-
-		if not len(re.findall('\.py', i)) > 0:
-			continue
-
-		salt += '_' + i
-
-	salt = hashlib.md5(salt).hexdigest()
-
-	if not salt == oldsalt:
-		print 'ONELINE: modules directory has changed. Picking up any new modules'
-
-		for i in files:
-			cname = re.sub('\.ol|\.py', '', i)
-			mod = '/' + cname
-
-			if len(re.findall('\.pyc', i)) > 0:
-				continue
-
-			if not len(re.findall('\.py', i)) > 0:
-				continue
-
-			if not mod in cherrypy.config.keys():
-				print "ONELINE: adding newly recognized " + i + ' module'
-
-		os.chdir(curr)
-
-		cherrypy.config.update({'request.modules_md5_snapshot': salt})
-
 class server(object):
 	global SERVERS
 	global MODULES
@@ -365,7 +314,6 @@ class server(object):
 			piddir = '../../socket/'
 
 		plugin(cherrypy.engine).subscribe()
-		cherrypy.process.plugins.Monitor(cherrypy.engine, update_ol, frequency=2).subscribe()
 		cherrypy.process.plugins.PIDFile(cherrypy.engine, piddir + 'oneline.pid.txt').subscribe()
 
 		cherrypy.tools.websocket = WebSocketTool()
@@ -427,6 +375,7 @@ class server(object):
 							  	    'request.module_md5': hashlib.md5(f).hexdigest(),
 							  	    'request.module_ctime': os.path.getmtime(i),
 							  	    'request.module_object': module,
+							  	    'request.module_logger': logger(module_name),
 							  	    'request.module_uuid': uuid.uuid4().__str__(),
 				              		'tools.websocket.handler_cls': getattr(module, module_name) }
 
@@ -437,6 +386,7 @@ class server(object):
 										  'request.module_md5': hashlib.md5(f).hexdigest(),
 										  'request.module_ctime': os.path.getmtime(i),
 										  'request.module_object': module,
+							  	    	  'request.module_logger': logger(module_name),
 								  	      'request.module_uuid': uuid.uuid4().__str__(),
 				              		   	  'tools.websocket.handler_cls': getattr(module, module_name) }
 
@@ -743,6 +693,16 @@ class pipeline(object):
 		else:
 			self.caller.freq = int(self.config['freq'])
 
+		if self.config['memcache']:
+			if 'memcache_client' in self.config.keys():
+				self.memcache = self.config['memcache_client']
+			else:
+				self.memcache = None
+		else:
+			self.memcache = None
+
+		self.logger = cherrypy.config['/' + config['module']]['request.module_logger']
+
 		self.setup()
 
 	def setup(self):
@@ -819,13 +779,14 @@ class pipeline(object):
 		for i in self._objs:
 			try:
 				i.storage = self.storage
+				i.logger = self.logger
 
 				if c == 0:
 					m = i.run(m)
 				else:
 					m = i.run(self._append(m, p))
 			except:
-				i.errors()
+				i.log()
 				c += 1
 
 			c += 1
@@ -888,10 +849,65 @@ class pipeline(object):
 """
 oneline's logger
 all logs should be stored
-at:
+at: {base}/logs
+README for more
 """
 class logger(object):
-	pass
+	def __init__(self, module_name):
+		curr = os.getcwd()
+
+		if os.path.exists('../../logs/'):
+			self.prefix = '../../logs/'
+			os.chdir('../../logs')
+		elif os.path.exists('../logs/'):
+			self.prefix = '../logs/'
+			os.chdir('../logs/')
+		elif os.path.exists('./logs/'):
+			self.prefix = './logs/'
+			os.chdir('./logs')
+		else:
+			self.prefix = '../../logs/'
+			os.chdir('../../logs')
+
+		today = datetime.datetime.today()
+		datestamp = today.strftime('%d-%b-%Y')
+
+		file_name = module_name + '_' + datestamp + '.log'
+
+		if os.path.isfile(file_name):
+			self.file_name = file_name
+		else:
+			f = open(file_name, 'w+')
+			f.close()
+			self.file_name = file_name
+
+		os.chdir(curr)
+
+
+	def append(self, data):
+		curr = os.getcwd()
+		if os.path.exists('../../logs/'):
+			os.chdir('../../logs')
+		elif os.path.exists('../logs/'):
+			os.chdir('../logs/')
+		elif os.path.exists('./logs/'):
+			os.chdir('./logs')
+		else:
+			os.chdir('../../logs')
+
+		if not 'time' in data.keys():
+			today = datetime.datetime.today()
+			data['time'] = today.strftime('%m/%d/%y %I:%M:%S')
+
+		if not 'addr' in data.keys():
+			data['addr'] = '127.0.0.1'
+
+		f = open(self.file_name, 'a+')
+
+		line = "[" + data['time']  + ']' + ' - ' + data['addr'] + ' - ' + data['object'] + ' - ' + data['message'] + "\r\n"
+		f.write(line)
+
+		os.chdir(curr)
 
 """
 geolocation module:
@@ -905,9 +921,13 @@ class geolocation(object):
 		self.every = every
 		self.range = 10
 		self.last = 0
+		self.errors = []
 
-	def errors(self):
-		pass
+	def log(self):
+		name = self.__str__()
+
+		for i in self.errors:
+			self.logger.append(dict(object=name, message=i))
 
 	def run(self, message):
 
@@ -939,9 +959,11 @@ class geolocation(object):
 		"""
 
 		if not 'lat' in getattr(_OL_DB, _OL_TABLE).fields:
+			self.errors.append('This table does have a latitude column')
 			raise NameError('ONELINE: This table does have a latitude column')
 
 		if not 'lng' in getattr(_OL_DB, _OL_TABLE).fields:
+			self.errors.append('This table does have a longitude column')
 			raise NameError('ONELINE: This table does have a longitude column')
 
 		if not 'data' in message.keys():
@@ -975,10 +997,13 @@ class geolocation(object):
 
 class time(object):
 	def __init__(self):
-		pass
+		self.errors = []
 
-	def errors(self):
-		pass
+	def log(self):
+		name = self.__str__()
+
+		for i in self.errors:
+			self.logger.append(dict(object=name, message=i))
 
 	def run(self, message):
 		start = int(message['packet']['time']['start'])
@@ -986,11 +1011,31 @@ class time(object):
 		_OL_DB = self.storage.get()['db']
 		_OL_TABLE = self.storage.get()['table']
 
+		if start > end:
+			self.errors.append('Start time must be lower than end time ' + ' received (start: ' + start + ')')
+			raise NameError('ONELINE: start time higher than end time in time')
+
 		if not 'data' in message.keys():
+			if not 'stime' in getattr(_OL_DB, _OL_TABLE).fields:
+				self.errors.append('This table does have a stime column')
+				raise NameError('ONELINE: This table does have a stime column')
+
+			if not 'etime' in getattr(_OL_DB, _OL_TABLE).fields:
+				self.errors.append('This table does have a etime column')
+				raise NameError('ONELINE: This table does have a etime column')
+
+			if getattr(getattr(getattr(_OL_DB, _OL_TABLE), 'stime'), 'type') != 'integer':
+				setattr(getattr(getattr(_OL_DB, _OL_TABLE), 'stime'), 'type', 'integer')
+
+			if getattr(getattr(getattr(_OL_DB, _OL_TABLE), 'etime'), 'type') != 'integer':
+				setattr(getattr(getattr(_OL_DB, _OL_TABLE), 'etime'), 'type', 'integer')
+
 			queries = []
 
 			queries.append(getattr(getattr(_OL_DB, _OL_TABLE), 'stime') >= start)
 			queries.append(getattr(getattr(_OL_DB, _OL_TABLE), 'etime') <= end)
+			queries.append(getattr(getattr(_OL_DB, _OL_TABLE), 'stime') <= \
+						   getattr(getattr(_OL_DB, _OL_TABLE), 'etime'))
 
 			query = reduce(lambda a,b:(a&b),queries)
 			rows = _OL_DB(query).select()
@@ -1000,7 +1045,8 @@ class time(object):
 		else:
 			for k in range(0, len(message['data'])):
 				if int(message['data'][k]['stime']) >= start and \
-				   int(message['data'][k]['etime']) <= end:
+				   int(message['data'][k]['etime']) <= end and \
+				   int(message['data'][k]['stime']) <= int(message['data'][k]['etime']):
 					if not 'confidence' in message['data'][k].keys():
 						message['data'][k]['confidence'] = 1
 					else:
@@ -1025,14 +1071,13 @@ class event(object):
 	global OPS
 
 	def __init__(self):
-		self.errors_ = []
+		self.errors = []
 
-	def errors(self):
-		print "ONELINE: Error in module"
-		for i in self.errors_:
-			print i
+	def log(self):
+		name = self.__str__()
 
-		print self
+		for i in self.errors:
+			self.logger.append(dict(object=name, message=i))
 
 	"""
 	dynamic queries implementation 'borrowed' from
@@ -1047,7 +1092,7 @@ class event(object):
 
 		for k,v in message['packet']['event'].iteritems():
 			if not k in getattr(_OL_DB, _OL_TABLE).fields:
-				self.errors_.append('ONELINE: This table does not have: ' + k + ' field (event module)')
+				self.errors.append('This table does not have: ' + k + ' field in: ' + _OL_TABLE + ' table')
 
 			if type(v) is list:
 				for i in v:

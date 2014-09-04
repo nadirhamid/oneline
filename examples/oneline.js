@@ -99,6 +99,15 @@
       return { 'op': op, 'value': val };
   };
 
+  /* get an elapse
+   * of time and convert it 
+   * to an integer
+   * @class
+   */
+  Oneline.moment = function(start, end) {
+      return { 'start': 0000, 'end': 3600 };
+  };
+
   /* geolocation module
    * @class
    */
@@ -153,6 +162,28 @@
           }     
       }
   };
+
+
+  /* time module
+   * @class
+   */
+   Oneline.time = function(options) {
+      Oneline.time.options = options;
+
+      return {
+
+          run: function(m)
+          {
+              this.m = m || {};
+              this.m.time = {};              
+
+              this.m.time.start = Oneline.time.options.moment.start;
+              this.m.time.end = Oneline.time.options.moment.end;
+
+              this.state = 1;
+          }
+      };
+   };
 
   /* pipeline module
    * @class
