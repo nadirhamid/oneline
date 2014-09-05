@@ -185,6 +185,25 @@
       };
    };
 
+   /* random module
+    * @class
+    */
+   Oneline.random = function(options) {
+      Oneline.random.options = options;
+
+      return {
+          run: function(m) 
+          {
+              this.m = m || {};
+              this.m.random = {};
+
+              this.m.random.amount = Oneline.random.options.amount;
+
+              this.state = 1;
+          }
+      };
+   };
+
   /* pipeline module
    * @class
    */

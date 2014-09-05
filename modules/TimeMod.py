@@ -18,7 +18,7 @@ class TimeMod(ol.module):
     	self.pipeline.run(message)
 
     def provider(self, message):
-        pass
+        self.pipeline.broadcast('testing. reporting from:' + self.__str__()) 
 
     def end(self):
         print "Closing module: " + self.__str__()

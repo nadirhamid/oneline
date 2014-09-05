@@ -19,4 +19,7 @@ class BurgerMod(ol.module):
     	self.pipeline.run(message)
 
     def provider(self, message):
+    	self.pipeline.broadcast("testing")
+
+    def provider(self, message):
         pass

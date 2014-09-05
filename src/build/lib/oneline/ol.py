@@ -9,7 +9,6 @@ import ast
 import inspect
 import array
 import thread
-import random
 import weakref
 import string
 import memcache
@@ -19,6 +18,7 @@ import re
 import sys
 import cherrypy
 import uuid
+import random as _random
 import time as _time
 
 from dal import DAL, Field
@@ -53,6 +53,7 @@ OBJS = [
 			"geo",
 			"event",
 			"echo",
+			"random",
 			"time",
 			"writer"
 	   ]
@@ -693,7 +694,7 @@ class pipeline(object):
 		else:
 			self.caller.freq = int(self.config['freq'])
 
-		if self.config['memcache']:
+		if 'memcache' in self.config.keys():
 			if 'memcache_client' in self.config.keys():
 				self.memcache = self.config['memcache_client']
 			else:
@@ -708,6 +709,16 @@ class pipeline(object):
 	def setup(self):
 		cherrypy.engine.publish('add-client', self.caller.unique, self.caller)
 
+
+	"""
+	broadcast a message to all connections
+	"""
+	def broadcast(self, message):
+		if not isinstance(message, dict):
+			message = dict(message=unicode(message))
+
+		bytes = map(ord, bsonlib.dumps(message)).__str__()
+		cherrypy.engine.publish('websocket-broadcast', bytes)
 
 	"""
 	filter the data based on the confidence level and according
@@ -994,6 +1005,42 @@ class geolocation(object):
 
 			return message['data']					
 
+class random(object):
+	def __init__(self):
+		self.errors = []
+
+	def log(self):
+		name = self.__str__()
+
+		for i in self.errors:
+			self.logger.append(dict(object=name, message=i))
+
+	def run(self, message):
+		amount = int(message['packet']['random']['amount'])
+		_OL_DB = self.storage.get()['db']
+		_OL_TABLE = self.storage.get()['table']
+
+		if not 'data' in message.keys():
+			queries = []
+			queries.append(getattr(_OL_DB, _OL_TABLE))
+
+			query = reduce(lambda a,b:(a&b),queries)
+			rows = _OL_DB(query).select(orderby='<random>', limitby=(0, amount))	
+
+			return rows.as_list()
+		else:
+			found = len(message['data'])
+
+			for i in range(0, amount):
+				sel = _random.randint(0, found)
+
+				if not 'confidence' in message['data'][sel].keys():
+					message['data'][sel]['confidence'] = 1
+				else:
+					message['data'][sel]['confidence'] += 1
+
+			return message['data']
+			
 
 class time(object):
 	def __init__(self):
