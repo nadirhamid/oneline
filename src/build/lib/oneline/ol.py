@@ -192,11 +192,15 @@ def scan_config(caller):
 			if logging:
 				config['logging'] = logging[0]
 
-			memcache = re.findall("ol_memcache\s+\=\s+\'(.*)\'", f)
+			mc = re.findall("ol_memcache\s+\=\s+\'(.*)\'", f)
 
-			if memcache:
+			if mc:
 				config['memcache'] = True
-				config['memcache_client'] = memcache.Client(['127.0.0.1:11211'], debug=0)
+				try:
+					config['memcache_client'] = memcache.Client(['127.0.0.1:11211'], debug=0)
+				except:
+					config['memcache'] = False
+					config['memcache_client'] = False
 			else:
 				config['memcache'] = False
 
@@ -696,7 +700,9 @@ class pipeline(object):
 
 		if 'memcache' in self.config.keys():
 			if 'memcache_client' in self.config.keys():
-				self.memcache = self.config['memcache_client']
+				self.memcache = self.config['memcache_client'] if self.config['memcache_client'] \
+															   else None
+
 			else:
 				self.memcache = None
 		else:
@@ -756,6 +762,26 @@ class pipeline(object):
 		"""
 
 		message = TextMessage(message.__str__())
+
+		""" first check memcache """
+		if not self.memcache is None:
+			salt = hashlib.md5(message.__str__()).hexdigest()
+			m = self.memcache.get(salt)
+
+			if m:
+				bytes = m
+
+				for i in client:
+					i.send(bytes)
+
+				try:
+					inspect.currentframe().f_back.f_locals['self'].provider(bytes)
+				except:
+					pass				
+
+				return
+
+
 
 		if len(re.findall(r'interop', message.__str__())) > 0:
 			m = json.loads(message.__str__())
@@ -849,6 +875,10 @@ class pipeline(object):
 
 		for i in client:
 			i.send(bytes)
+
+		if not self.memcache is None:
+			salt = hashlib.md5(message.__str__()).hexdigest()
+			self.memcache.set(salt, bytes)
 
 		try:
 			inspect.currentframe().f_back.f_locals['self'].provider(bytes)
