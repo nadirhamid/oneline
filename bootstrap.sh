@@ -73,10 +73,10 @@ python ./setup.py install
 cd $ONELINE_BASE/logs/
 rm *.log
 
-cd $ONELINE_BASE/modules
+cd $ONELINE_BASE/modules/
 rm *.pyc
 
-cd $ONELINE_BASE/socket
+cd $ONELINE_BASE/socket/
 rm *.pid
 
 #######################################################################
