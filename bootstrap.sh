@@ -84,10 +84,10 @@ rm -f *.pid
 ## Finally start  
 ## the server 
 ########################################################################
+cd $ONELINE_BASE
+export ONELINE_BASE=$(pwd)
 
 cd $ONELINE_BASE/bin/
 rm -f /usr/bin/onelined
 cp ./onelined /usr/bin/
-export ONELINE_BASE=$(pwd)
-
 ./onelined --start
