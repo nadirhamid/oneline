@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 ##############################################################
 # run or stop oneline's daemon
 ##############################################################
@@ -24,8 +24,8 @@ if [ ${1} == "--stop" ]; then
 	kill ${pid} &
 	pid=$(cat ../socket/oneline.pid.txt)
 	kill ${pid} &
-	rm ./oneline.pid.txt
-	rm ../socket/oneline.pid.txt
+	rm -f ./oneline.pid.txt
+	rm -f ../socket/oneline.pid.txt
 	echo "All connections to oneline have closed. Come again :("
 fi
 
@@ -35,8 +35,8 @@ if [ ${1} == "--restart" ]; then
 	kill ${pid} &	
 	pid=$(cat ../socket/oneline.pid.txt)
 	kill ${pid} &
-	rm ./oneline.pid.txt
-	rm ../socket/oneline.pid.txt
+	rm -f ./oneline.pid.txt
+	rm -f ../socket/oneline.pid.txt
 
 	python ../server.py &
 	fpid = $!
