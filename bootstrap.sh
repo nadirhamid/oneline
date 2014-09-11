@@ -87,6 +87,6 @@ rm -f *.pid
 
 cd $ONELINE_BASE/bin/
 cp ./onelined /usr/bin/
-export $ONELINE_BASE
+export ONELINE_BASE
 
 ./onelined --start
