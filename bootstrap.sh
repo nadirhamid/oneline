@@ -71,13 +71,13 @@ python ./setup.py install
 
 # some cleanup before initial run
 cd $ONELINE_BASE/logs/
-rm *.log
+rm -f *.log
 
 cd $ONELINE_BASE/modules/
-rm *.pyc
+rm -f *.pyc
 
 cd $ONELINE_BASE/socket/
-rm *.pid
+rm -f *.pid
 
 #######################################################################
 
