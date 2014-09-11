@@ -25,6 +25,7 @@ wget $CHERRYPY_LATEST
 tar xvf CherryPy*.tar.gz
 rm CherryPy*.tar.gz
 mv CherryPy* cherrypy
+chmod 755 cherrypy
 
 wget $WS4PY_LATEST
 tar xvf ws4py*.tar.gz
@@ -32,7 +33,7 @@ rm ws4py*.tar.gz
 mv ws4py* websocket
 
 wget $SETUP_TOOLS -O - | sudo python
-rm $ONELINE_BASE/lib/setuptools*.tar.gz
+rm $ONELINE_BASE/lib/setuptools*.zip
 
 cd $ONELINE_BASE/lib/bson/
 python ./setup.py build
@@ -67,6 +68,16 @@ python ./setup.py install
 cd $ONELINE_BASE/src/
 python ./setup.py build
 python ./setup.py install
+
+# some cleanup before initial run
+cd $ONELINE_BASE/logs/
+rm *.log
+
+cd $ONELINE_BASE/modules
+rm *.pyc
+
+cd $ONELINE_BASE/socket
+rm *.pid
 
 #######################################################################
 
