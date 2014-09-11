@@ -14,6 +14,19 @@
 ########################################################################
 
 ONELINE_BASE=$(pwd)
+CHERRYPY_LATEST='https://pypi.python.org/packages/source/C/CherryPy/CherryPy-3.2.4.tar.gz#md5=e2c8455e15c39c9d60e0393c264a4d16'
+WS4PY_LATEST='https://pypi.python.org/packages/source/w/ws4py/ws4py-0.3.4.tar.gz#md5=6b47e33cbd13f5c134b04f2a44a480ad'
+SETUP_TOOLS='https://bitbucket.org/pypa/setuptools/raw/bootstrap/ez_setup.py'
+
+cd $ONELINE_BASE/lib
+wget $CHERRYPY_LATEST
+tar xvf CherryPy*.tar.gz
+mv CherryPy cherrypy
+wget $WS4PY_LATEST
+tar xvf ws4py*.tar.gz
+mv ws4py websocket
+
+wget $SETUP_TOOLS -O - | sudo python
 
 cd $ONELINE_BASE/lib/bson/
 python ./setup.py build
