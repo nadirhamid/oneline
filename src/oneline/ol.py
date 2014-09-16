@@ -192,6 +192,12 @@ def scan_config(caller):
 			if logging:
 				config['logging'] = logging[0]
 
+
+			peers = re.findall("ol_peers\s+\=\s+(\d+)", f)
+			
+			if peers:
+				config['peers'] = peers[0]
+
 			mc = re.findall("ol_memcache\s+\=\s+\'(.*)\'", f)
 
 			if mc:
@@ -203,6 +209,12 @@ def scan_config(caller):
 					config['memcache_client'] = False
 			else:
 				config['memcache'] = False
+
+			multi = re.findall("ol_multiplex\s+\=\s+\'(.*)\'", f)
+
+			if multi:
+				config['multiplex'] = True
+				config['multiplex'] = multi[0]
 
 		except:
 			pass
@@ -452,6 +464,8 @@ class storage(object):
 			caller = config_name
 
 		has_config = False
+		join_table = False
+		join_on = False
 		curr = os.getcwd()
 
 		print "ONELINE: " +  caller + "'s " + "config file: " + config_name
@@ -524,8 +538,17 @@ class storage(object):
 					password = re.findall("db_pass\s+\=\s+\'(.*)\'", f)[0]
 					host = re.findall("db_host\s+\=\s+\'(.*)\'", f)[0]
 					port = re.findall("db_port\s+\=\s+\'(.*)\'", f)[0]
+					join_table = re.findall("db_join_table\s+\=\s+\'(.*)\'", f)[0]
+					join_on = re.findall("db_join_on\s+\=\s+\'(.*)\'", f)[0]
 				except:
 					pass
+
+				try:
+					join_table = re.findall("db_join_table\s+\=\s+\'(.*)\'", f)[0]
+					join_on = re.findall("db_join_on\s+\=\s+\'(.*)\'", f)[0]
+				except:
+					pass
+
 
 		if db_type in ['mongodb']:
 			host = host + ':' + port
@@ -607,6 +630,14 @@ class storage(object):
 		_OL_TABLE = table
 		_OL_DB = self.db
 		self.table = table
+
+		if join_table:
+			self.join_table = join_table
+		else:
+			self.join_table = False
+		if join_on:
+			self.join_on = join_on
+
 		os.chdir(curr)
 
 
@@ -708,6 +739,19 @@ class pipeline(object):
 		else:
 			self.memcache = None
 
+
+		if 'multiplex' in self.config.keys():
+			if self.config['multiplex']:
+				self.multiplex = True 
+				self.multiplex_amount = int(self.config['multiplex'])
+				self.multiplex_current = 0
+				self.multiplex_container = []
+
+			else:
+				self.multiplex = False
+		else:
+			self.multiplex = False
+
 		self.logger = cherrypy.config['/' + config['module']]['request.module_logger']
 
 		self.setup()
@@ -771,14 +815,39 @@ class pipeline(object):
 			if m:
 				bytes = m
 
-				for i in client:
-					i.send(bytes)
+				if self.multiplex:
+					if self.multiplex_current == self.multiplex_amount:
+						""" send the message """
 
-				try:
-					inspect.currentframe().f_back.f_locals['self'].provider(bytes)
-				except:
-					pass				
+						message = dict(message=self.multiplex_container)
+						bytes = map(ord, bsonlib.dumps(message)).__str__()
 
+						for i in client:
+							i.send(bytes)
+
+						try:
+							inspect.currentframe().f_back.f_locals['self'].provider(bytes)
+						except:
+							pass
+
+						self.multiplex_current = 0
+						self.multiplex_container = []
+
+					else:
+						""" store the message """
+						#self.multiplex_container.append(m)
+						self.multiplex_current += 1
+
+				else:
+					for i in client:
+						i.send(bytes)
+
+					try:
+						inspect.currentframe().f_back.f_locals['self'].provider(bytes)
+					except:
+						pass				
+
+				_time.sleep(self.caller.freq)
 				return
 
 
@@ -847,6 +916,47 @@ class pipeline(object):
 		except:
 			pass
 
+
+		"""
+		add any join table if set
+		also look for id if available
+		if it isnt use "table_name"_id for 
+		match
+		"""
+		if self.storage.join_table and type(m) is list:
+			_OL_DB = self.storage.get()['db']
+			_OL_TABLE = self.storage.get()['table']
+			_OL_JOIN_TABLE = self.storage.join_table
+
+			if _OL_JOIN_TABLE in getattr(_OL_DB, 'tables'):
+				if self.storage.join_on:
+					_OL_JOIN_ON = self.storage.join_on
+				else:
+					_OL_JOIN_ON = _OL_TABLE
+
+				for i in range(0, len(m)):
+					queries = []
+					queries.append(getattr(getattr(_OL_DB, _OL_JOIN_TABLE), _OL_JOIN_ON) == m[i]['id'])
+					query = reduce(lambda a,b:(a&b),queries)
+					row = _OL_DB(query).select()
+
+					try:
+						row = row.as_list()[0]
+
+						for j in row.items():
+							""" prepend ambigious columns with join table name """
+
+							if j[0] in m[i].keys():
+								continue
+
+							m[i][j[0]] = j[1]
+
+					except:
+						pass
+
+			else:
+				self.logger.append(dict(message="Could not find join table", object=self.__str__()))
+
 		"""
 		if results are met
 		we need to run the
@@ -872,18 +982,42 @@ class pipeline(object):
 		else:
 			bytes = map(ord, bsonlib.dumps(m)).__str__()
 
+		if self.multiplex:
+			if self.multiplex_current == self.multiplex_amount:
+				""" send the message """
 
-		for i in client:
-			i.send(bytes)
+				message = dict(message=self.multiplex_container)
+				bytes = map(ord, bsonlib.dumps(message)).__str__()
+
+				for i in client:
+					i.send(bytes)
+
+				try:
+					inspect.currentframe().f_back.f_locals['self'].provider(bytes)
+				except:
+					pass
+
+				self.multiplex_current = 0
+				self.multiplex_container = []
+
+			else:
+				""" store the message """
+				self.multiplex_container.append(m)
+				self.multiplex_current += 1
+
+		else:
+			for i in client:
+				i.send(bytes)	
+
+			try:
+				inspect.currentframe().f_back.f_locals['self'].provider(bytes)
+			except:
+				pass
+
 
 		if not self.memcache is None:
 			salt = hashlib.md5(message.__str__()).hexdigest()
 			self.memcache.set(salt, bytes)
-
-		try:
-			inspect.currentframe().f_back.f_locals['self'].provider(bytes)
-		except:
-			pass
 
 		_time.sleep(self.caller.freq)
 
@@ -942,6 +1076,9 @@ class logger(object):
 
 		if not 'addr' in data.keys():
 			data['addr'] = '127.0.0.1'
+
+		if not 'object' in data.keys():
+			data['object'] = 'Main Pipeline Object'
 
 		f = open(self.file_name, 'a+')
 
