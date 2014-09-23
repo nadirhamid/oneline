@@ -54,6 +54,7 @@ OBJS = [
 			"event",
 			"echo",
 			"random",
+			"sound",
 			"time",
 			"writer"
 	   ]
@@ -466,6 +467,7 @@ class storage(object):
 		has_config = False
 		join_table = False
 		join_on = False
+		omitlist = False
 		curr = os.getcwd()
 
 		print "ONELINE: " +  caller + "'s " + "config file: " + config_name
@@ -546,6 +548,12 @@ class storage(object):
 				try:
 					join_table = re.findall("db_join_table\s+\=\s+\'(.*)\'", f)[0]
 					join_on = re.findall("db_join_on\s+\=\s+\'(.*)\'", f)[0]
+				except:
+					pass
+
+				try:
+					omitblob = re.findall("db_omit\s+\=\s+(.*)", f)[0]
+					omitlist = re.findall("'([\w]+)'", omitblob)
 				except:
 					pass
 
@@ -635,8 +643,14 @@ class storage(object):
 			self.join_table = join_table
 		else:
 			self.join_table = False
+
 		if join_on:
 			self.join_on = join_on
+
+		if omitlist:
+			self.omitlist = omitlist
+		else:
+			self.omitlist = False
 
 		os.chdir(curr)
 
@@ -957,6 +971,20 @@ class pipeline(object):
 			else:
 				self.logger.append(dict(message="Could not find join table", object=self.__str__()))
 
+
+		"""
+		omit any fields
+		that need to be
+		erased
+		"""
+		if self.storage.omitlist:
+			for i in range(0, len(m)):
+				for j in self.storage.omitlist:
+					if j == 'confidence':
+						continue
+						
+					del m[i][j]
+
 		"""
 		if results are met
 		we need to run the
@@ -1171,6 +1199,22 @@ class geolocation(object):
 						message['data'][k]['confidence'] = 0
 
 			return message['data']					
+
+class sound(object):
+	def __init__(self):
+		self.errors = []
+
+	def log(self):
+		name = self.__str__()
+
+		for i in self.errors:
+			self.logger.append(dict(object=name, message=i))
+
+	def run(self):
+		_OL_DB = self.storage.get()['db']
+		_OL_TABLE = self.storage.get()['table']
+		
+		pass
 
 class random(object):
 	def __init__(self):
