@@ -9,24 +9,27 @@
         <h2>Oneline output</h2>
         <textarea style='width: 100%; height: 80%; ' id='output' cols='1024' rows='2000' ></textarea>
         <br />
-        <button id="oneline_element" />
+        <button id="oneline_element">Click me to run!</button>
      </form>
 
       <script type='application/javascript'>
 
           /* bind the sound
            * object to an event
+           * 
+           * pipelines for event style
+           * are only ran when an event
+           * occurs. There frequency
+           * is still used and only
+           * handled when an event occurs
            */
-          Oneline.setup({ server: 'SpeechRecognitionMod', 
+          Oneline.setup({ server: 'EventBasedMod', 
                           type: 'bind', 
                           freq: 1,
                           target: 'oneline_element',
                           on: 'click' });
 
-          var sound_ = Oneline.sound({
-              'lang': 'en-GB',
-              'field': 'description'
-          });
+
           var geo = Oneline.geo({
               'range': 20.3020302
           });

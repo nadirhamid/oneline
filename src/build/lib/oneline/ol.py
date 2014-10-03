@@ -129,6 +129,8 @@ def scan_config(caller):
 
 	config = dict()
 	proto = re.findall(r'([\w\_]+)\.', caller)
+	conf = False
+	has_config = False
 
 	if len(proto) > 0:
 		config['module'] = proto[0]
