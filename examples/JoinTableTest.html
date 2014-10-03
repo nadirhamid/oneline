@@ -13,14 +13,16 @@
 
       <script type='application/javascript'>
 
-          O.setup({ server: 'JoinTableMod', freq: 1, strict: 1});
+          Oneline.setup({ server: 'JoinTableMod', freq: 100, strict: 1});
 
-          var agent = O.agent({ name: 'Jack Danny' });
-          var time = O.time({ 'moment': {start: 0, end: 3600} });
-          var rand = O.random({ 'amount': 100 });
-          
-
-          O.pipeline(agent, [time, rand], function(res) {
+          Oneline.time({ 
+            'moment': {start: 0, end: 3600}
+          });
+          Oneline.random({ 
+            'amount': 100 
+          });
+  
+          O.pipeline(function(res) {
 
               $('#output').html($('#output').html() + '\n' + JSON.stringify(res) + "\n");
               $("#output").scrollTop($("#output")[0].scrollHeight);

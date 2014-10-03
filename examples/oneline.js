@@ -55,6 +55,10 @@
       Oneline.settings = options;
       Oneline.port = options.port || Oneline.port;
       Oneline.host = options.host || Oneline.host;
+      Oneline.type = options.type === 'bind' ? 'bind' : 'auto';
+      Oneline.on = options.on || 'click';
+      Oneline.target = options.target;
+
       options.server = options.module || options.server;
 
       if (options.server.match(/ws\:\/\//))
@@ -71,6 +75,13 @@
       /* onclose try to reestablish
        * the connection
        */
+
+       /* get a target element 
+        * for the target event
+        */
+      Oneline.target = document.getElementById(Oneline.target);
+
+      console.log(Oneline.target);
   };
 
   /* agent object for oneline
@@ -211,6 +222,14 @@
       O.objects = objects;
       O.callback = callback;
       O.protoline.push(this);
+      O.linetype = Oneline.type;
+      O.provider = O.linetype === 'bind' ? 'Timeout' : 'Interval';
+      O.runner = 'Interval';
+
+      if (Oneline.type === 'bind')
+          if (typeof Oneline.target !== 'undefined' && Oneline.target.tagName)
+                Oneline.target['on' + Oneline.on] = 
+                   function() { return Oneline.pipeline(agent, O.objects, O.callback).run(); }
 
       return {
 
@@ -231,7 +250,7 @@
            */
           run: function() 
           {
-              O.t = setInterval(function() {
+              O.t = window['set' + O.provider](function() {
                   if (Oneline.running)
                       return;
 
@@ -252,11 +271,10 @@
                   /* this should be communative
                    * and not
                    */
-
                   for (var i in O.objects) {
                       O.objects[parseInt(i)].run(m);
 
-                      O.oot = setInterval(function() {
+                      O.oot = window['set' + O.runner](function() {
 
                           /* check if the prev
                            */ 
@@ -272,20 +290,19 @@
 
                               c ++;
 
-                              clearInterval(O.oot);
+                              window['clear' + O.runner](O.oot);
                           }
 
                       }, 1);
                   }
 
-                  O.ooot = setInterval(function() {
+                  O.ooot = window['set' + O.runner](function() {
                       if (c === O.objects.length) {
                           m_.packet = m;
 
                           /* if we have an agent,
                            * add it to the message
                            */
-
                           t = new Date().getTime();
                           m_.packet.timestamp = t; 
                           m_.packet.interop = O.interop;
@@ -297,7 +314,8 @@
                               O.callback(m_);
 
                           O.running = 0;
-                          clearInterval(O.ooot);
+
+                          window['clear' + O.runner](O.ooot);
                       }
                   }, 1);
 
@@ -305,6 +323,40 @@
           }
       };
   };
+
+   /* upcoming snapshot
+    * allow for event based
+    * voice input
+    *
+    * @class
+    */
+   Oneline.sound = function(options) {
+      Oneline.sound.options = options;
+
+      return {
+          run: function(m)
+          {
+              this.m = m || {};
+              this.m.sound = {};
+              this.m.sound.length = Oneline.sound.options.length || 60;
+              this.m.sound.field = Oneline.sound.options.field;
+              var that = this;
+
+              Oneline.speech = new webkitSpeechRecognition();
+
+              Oneline.speech.onstart = function() {
+              };
+              Oneline.speech.onresult = function(e) {
+                  console.log(e);
+                  that.state = 1;
+              };
+
+              Oneline.speech.lang = Oneline.sound.options.lang || "en-GB";
+              Oneline.speech.start();
+          }
+      };
+   };
+
 
   Oneline.connector =
   {

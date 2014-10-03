@@ -313,6 +313,39 @@ class server(object):
 		     port=DEFAULTS['port'],
 		     path=DEFAULTS['path']):
 
+		"""
+		first obtain the 
+		basic values found
+		in the master config at: ../conf/Main.conf
+		"""
+
+		curr = os.getcwd()
+
+		if os.path.exists('../../conf/'):
+			os.chdir('../../conf')
+			f = open('./Main.conf').read()
+		elif os.path.exists('../conf/'):
+			os.chdir('../conf')
+			f = open('./Main.conf')		
+		elif os.path.exists('./conf/'):
+			os.chdir('./conf')
+			f = open('./Main.conf').read()
+		else:
+			os.chdir('../../conf')
+			f = open('./Main.conf').read()	
+
+		try:
+			host = re.findall("ol_host\s+\=\s+\'(.*)\'", f)[0]
+		except:
+			pass
+
+		try:
+			port = int(re.findall("ol_port\s+\=\s+\'(.*)\'", f)[0])
+		except:
+			pass
+
+		os.chdir(curr)
+
 		self.host = host 
 		self.port = int(port)
 		self.path = path 
@@ -982,7 +1015,7 @@ class pipeline(object):
 				for j in self.storage.omitlist:
 					if j == 'confidence':
 						continue
-						
+
 					del m[i][j]
 
 		"""
@@ -1200,6 +1233,14 @@ class geolocation(object):
 
 			return message['data']					
 
+"""
+sound object must satisfy the following
+conditions:
+
+1. All low level I/O is handled on the client end
+2. One descriptor must be attached to the sound object
+3. All queries must 'partially' match the full expression
+"""
 class sound(object):
 	def __init__(self):
 		self.errors = []
@@ -1213,8 +1254,65 @@ class sound(object):
 	def run(self):
 		_OL_DB = self.storage.get()['db']
 		_OL_TABLE = self.storage.get()['table']
-		
-		pass
+
+		descriptor = str(message['packet']['sound']['description'])
+		field = str(message['packet']['sound']['field'])
+
+		if not 'data' in message.keys():
+
+			if not field in getattr(_OL_TABLE, 'fields'):
+				self.errors.append('This table did not have a: ' + field + ' field')
+				raise NameError('ONELINE: this table does not have a ' + field + ' field')
+
+			"""
+			rows should be structured like
+			[ {'id': 1, 'score': 19} ]
+			"""
+			data = []
+			olen = len(descriptor)
+			step = float(1) / float(olen)
+
+			for i in descriptor:
+				queries = []
+
+				queries.append(getattr(getattr(_OL_DB, _OL_TABLE), field).like('%' + i + '%'))
+
+				query = reduce(lambda a,b:(a&b),queries)
+				rows = _OL_DB(query).select()	
+
+				"""
+				add its id to the rows list
+				"""
+				for i in rows:
+					if not i.id in rows.keys():
+						data.append(dict(id=rows.id, score=1))
+					else:
+						for i in data:
+							if data[i]['id'] == i.id:
+								data[i]['score'] += step
+				
+			for i in data:
+				pass
+		else:
+			if not field in message['data'].keys():
+				self.errors.append('This table did not have a: ' + field + ' field')
+				raise NameError('ONELINE: this table does not have a ' + field + ' field')
+
+			for i in message['data']:
+				confidence = 0
+				olen = len(descriptor)
+				step = float(1) / float(olen)
+
+				for j in descriptor: 
+					if len(re.findall('.*' + j + '.*', message['data'][i][field])) > 0:
+						confidence += step
+
+				if not 'confidence' in message['data'][i].keys():
+					message['data'][sel]['confidence'] = step
+				else:
+					message['data'][sel]['confidence'] += step
+
+			return message['data']
 
 class random(object):
 	def __init__(self):

@@ -13,14 +13,17 @@
 
       <script type='application/javascript'>
 
-          O.setup({ server: 'RandomMod', freq: 1, host: '192.168.1.66', strict: 1});
+          /* bind the sound
+           * object to an event
+           */
+          Oneline.setup({ server: 'SpeechRecognitionMod', host: '192.168.1.66', bind: true  });
 
-          var agent = O.agent({ name: 'Jack Danny' });
-          var time = O.time({ 'moment': {start: 0, end: 3600} });
-          var rand = O.random({ 'amount': 100 });
-          
+          var sound = Oneline.sound({
+              'lang': 'en-GB',
+              'field': 'description'
+          });
 
-          O.pipeline(agent, [time, rand], function(res) {
+          Oneline.pipeline({}, [sound], function(res) {
 
               $('#output').html($('#output').html() + '\n' + JSON.stringify(res) + "\n");
               $("#output").scrollTop($("#output")[0].scrollHeight);
