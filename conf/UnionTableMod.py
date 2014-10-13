@@ -17,22 +17,10 @@ db_database = 'testing'
 db_host = '127.0.0.1'
 db_join_table = 'resources'
 db_join_on = 'resource_id'
-db_omit = 'resource_id', 'id', 'photo', 'password'
-db_union = 'some_table'
-db_union_on = 'customer_id', 'customer_name', 'company_id'
-ol_listen_on = '127.0.0.1'
-
-# communicate with multiple machines
-# for the same data
-# this node will always be given
-# first grade access and 
-# act as the leader
-ol_upstream = 'yes'
-ol_cluster = '203.202.1010', '202.201.201
-
-# note:
-# on the other end the following config matches
-# this, 
-# ol_downstream = 'yes'
+ol_freq = '0'
+ol_logging = 'verbose'
+ol_broadcast = 'singular'
+db_commit_timeout = 3600
+ol_cluster_size = 200
 
 ==========================================

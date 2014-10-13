@@ -12,6 +12,7 @@ import thread
 import weakref
 import string
 import memcache
+import socket
 import datetime
 import os
 import re
@@ -83,6 +84,34 @@ def proto(self):
 @cherrypy.expose
 def proto_():
    	cherrypy.log("Handler created: %s" % repr(cherrypy.request.ws_handler))
+
+
+"""
+downstream packets
+are sent in BSON
+"""
+def downstream():
+	global MODULES
+
+	for i in MODULES:
+		"""
+		get a downstream
+		request for this
+		"""
+
+		config = scan_config(i + '.conf')
+
+		if 'downstream' in config.keys():
+			if config['downstream']:
+				if 'dispatcher' in config.keys():
+					sock = socket.socket()
+					sock.connect((config['dispatcher_address'], config['dispatcher_port']))
+					packet = sock.recv(2048)
+					db = storage(caller=caller_name())
+					pipeline = pipeline(pline, db, {}, config)
+
+					message = pipeline.run(packet)
+					sock.send(message)
 
 """
 get the caller information
@@ -219,12 +248,64 @@ def scan_config(caller):
 				config['multiplex'] = True
 				config['multiplex'] = multi[0]
 
+			upstream = re.findall("ol_upstream\s+\=\s+\'(.*)\'", f)
+
+			config['upstream'] = False
+
+			try:
+				if upstream[0] == 'yes':
+					config['upstream'] = True
+				else:
+					config['upstream'] = False
+			except:
+				config['upstream'] = False
+
+			## now find
+			## its cluster
+			cluster = re.findall("ol_cluster\s+\=\s+\'(.*)\'", f)
+			try: 
+				clusterblob = re.findall("ol_cluster\s+\=\s+(.*)", f)[0]
+				config['cluster'] = re.findall("'([\w\d\.]+)'", clusterblob)
+			except:
+				config['cluster'] = False
+
+			downstream = re.findall("ol_downstream\s+\=\s+\'(.*)\'", f)
+			if downstream:
+				if downstream[0] == 'yes':
+					config['downstream'] = True
+				else:
+					config['downstream'] = False
+			else:
+				config['downstream'] = False
+
+			dispacher = re.findall("ol_dispatcher\s+\=\s+\'(.*)\'", f)
+			if dispatcher:
+				config['dispatcher'] = dispatcher[0]
+			else:
+				config['dispatcher'] = False
+
+			dispatcher = re.findall("ol_dispatcher_address\s+\=\s+\'(.*)\'", f)
+			if dispatcher:
+				config['dispatcher_address'] = dispatcher[0]
+			else:
+				config['dispatcher_address'] = False
+
+			dispatcher = re.findall("ol_dispatcher_port\s+\=\s+\'(.*)\'", f)
+			if dispatcher:
+				config['dispatcher_port'] = dispatcher[0]
+			else:
+				config['dispatcher_port'] = False
+
+			dispatcher = re.findall("ol_dispatcher_timeout\s+\=\s+\'(.*)\'", f)
+			if dispatcher:
+				config['dispatcher_timeout'] = dispatcher[0]
+			else:
+				config['dispatcher_timeout'] = 10
+
 		except:
 			pass
 
 	os.chdir(curr)
-
-	print config
 	return config
 
 
@@ -368,11 +449,13 @@ class server(object):
 
 		plugin(cherrypy.engine).subscribe()
 		cherrypy.process.plugins.PIDFile(cherrypy.engine, piddir + 'oneline.pid.txt').subscribe()
+		cherrypy.process.plugins.Monitor(cherrypy.engine, downstream, frequency=5).subscribe()
 
 		cherrypy.tools.websocket = WebSocketTool()
 
 	def start(self):
 		global _OL_SERVER
+		global MODULES
 
 		curr = os.getcwd()
 
@@ -443,6 +526,9 @@ class server(object):
 								  	      'request.module_uuid': uuid.uuid4().__str__(),
 				              		   	  'tools.websocket.handler_cls': getattr(module, module_name) }
 
+			MODULES.append(module_name)
+			MODULES.append(cname)
+
 		os.chdir(curr)
 
 		print 'ONELINE CONFIG: ' 
@@ -502,6 +588,8 @@ class storage(object):
 		has_config = False
 		join_table = False
 		join_on = False
+		union_table = False
+		union_on = False
 		omitlist = False
 		curr = os.getcwd()
 
@@ -583,6 +671,12 @@ class storage(object):
 				try:
 					join_table = re.findall("db_join_table\s+\=\s+\'(.*)\'", f)[0]
 					join_on = re.findall("db_join_on\s+\=\s+\'(.*)\'", f)[0]
+				except:
+					pass
+
+				try:
+					union_table = re.findall("db_union\s+\=\s+\'(.*)\'", f)[0]
+					union_on = re.findall("db_union_on\s+\=\s+\'(.*)\'", f)[0]
 				except:
 					pass
 
@@ -682,6 +776,14 @@ class storage(object):
 		if join_on:
 			self.join_on = join_on
 
+		if union_table:
+			self.union_table = union_table
+		else:
+			self.union_table = False
+
+		if union_on:
+			self.union_on = union_on
+
 		if omitlist:
 			self.omitlist = omitlist
 		else:
@@ -697,6 +799,12 @@ class storage(object):
 
 		self.db.commit()
 		return dict(db=self.db, table=self.table)
+
+	"""
+	set something
+	"""
+	def set(self, key, val):
+		self[key] = val
 
 """
 class modules defines
@@ -801,6 +909,8 @@ class pipeline(object):
 		else:
 			self.multiplex = False
 
+
+		self.caller.config = self.config
 		self.logger = cherrypy.config['/' + config['module']]['request.module_logger']
 
 		self.setup()
@@ -930,6 +1040,7 @@ class pipeline(object):
 			m['limit'] = p['limit']
 
 		c = 0
+		i_m = m
 
 		for i in self._objs:
 			try:
@@ -945,6 +1056,34 @@ class pipeline(object):
 				c += 1
 
 			c += 1
+
+		if self.storage.union_table:
+			mp = m
+			m = i_m
+
+			_OL_DB = self.storage.get()['db']
+			_OL_TABLE = self.storage.get()['table']
+			self.storage.set('table', self.storage.union_table)
+
+			c = 0
+			for i in self._objs:
+				try:
+					i.storage = self.storage
+					i.logger = self.logger
+
+					if c == 0:
+						m = i.run(m)
+					else:
+						m = i.run(self._append(m, p))
+				except:
+					i.log()
+					c += 1
+
+				c += 1
+
+			m = list(set(m + mp))
+		else:
+			pass
 
 		"""
 		if we dont have a confidence value by now 
@@ -1006,7 +1145,6 @@ class pipeline(object):
 			else:
 				self.logger.append(dict(message="Could not find join table", object=self.__str__()))
 
-
 		"""
 		omit any fields
 		that need to be
@@ -1019,6 +1157,74 @@ class pipeline(object):
 						continue
 
 					del m[i][j]
+
+		"""
+		if this is a downstream
+		request simply return it
+		"""
+		if self.config['downstream']:
+			return m
+
+		"""
+		is this an upstream
+		request?
+		then bind a socket
+		to the request, 
+		and listen for
+		the responses
+		when all responses
+		are fulfilled, return
+		"""
+		if self.config['upstream']:
+			faddrs = []
+			cluster = self.config['cluster']
+			addr = self.config['dispatcher_address']
+			timeout = int(self.config['dispatcher_timeout']);
+			port = int(self.config['dispatcher_port'])
+			print "Upstreaming to other servers"
+
+			sock = socket.socket()
+			sock.bind((addr, port))
+			sock.listen(5)
+
+			try:
+				start = time_.time()
+				while True:
+					now = time_.time()
+
+					if now - start > timeout:
+						break
+
+					if len(faddrs) == len(cluster):
+						break
+
+					client, addr = sock.accept()
+
+					if not addr in self.config.cluster:
+						continue
+
+					## dont do it twice
+					if addr in faddrs:
+						continue
+
+					faddrs.append(addr)
+					client.send(m['packet'])
+
+					message_ = client.recv(20024)
+
+					literal = ast.literal_eval(message_.__str__())
+
+					"""
+					ensure the message fits in
+					"""
+
+					m_ = bsonlib.loads(bytearray(literal).__str__())
+
+					"""
+					now merge both m_ and m
+					"""
+			except:
+				self.logger.append(dict(message="Unable to bind socket to upstream", object=self.__str__()))
 
 		"""
 		if results are met
