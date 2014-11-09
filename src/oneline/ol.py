@@ -469,8 +469,8 @@ class server(object):
 			os.chdir('./modules')
 			files = os.listdir('./')
 		else:
-			os.chdir('../../modules')
-			files = os.listdir('./')		
+			os.chdir('/usr/local/modules')
+			files = os.listdir('/usr/local/modules')		
 
 		config = dict()
 		salt = ''
@@ -623,8 +623,8 @@ class storage(object):
 						has_config = True
 						f = open(config_name, 'r+').read()
 				else:
-					os.chdir('../../conf')
-					prefix = '../../conf'
+					os.chdir('/usr/local/conf')
+					prefix = '/usr/local/conf'
 
 					if os.path.isfile(config_name):
 						has_config = True
