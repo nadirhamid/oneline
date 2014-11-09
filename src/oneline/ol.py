@@ -489,6 +489,9 @@ class server(object):
 			cname = re.sub('\.ol|\.py', '', i)
 			salt += '_' + i
 
+			if not os.path.isfile(i):
+				continue
+		
 			module = __import__(cname, globals(), locals())
 
 			"""

@@ -72,3 +72,51 @@ setup(name="oneline",
           'Topic :: Software Development :: Libraries :: Python Modules'
       ],
       cmdclass=dict(build_py=buildsetup))
+
+
+fpath = '/usr/bin/'
+lpath = '/usr/local/'
+ffpath = '/usr/'
+path = os.getcwd()
+bpath = os.path.abspath('../')
+bin_path = os.path.abspath('../bin/')
+mod_path = os.path.abspath('../modules/')
+conf_path = os.path.abspath('../conf/')
+js_path = os.path.abspath('../js/')
+os.chdir(fpath)
+os.system('sudo ln -s ' + path + "/oneline/ol.py > /dev/null 2>&1 &")
+os.system('sudo ln -s ' + path + "/oneline/dal.py > /dev/null 2>&1 &")
+os.system('sudo ln -s ' + path + "/oneline/odict.py > /dev/null 2>&1 &")
+os.system('sudo ln -s ' + path + "/oneline/oneline-cli.py > /dev/null 2>&1 &")
+os.system('sudo ln -s ' + path + "/oneline/oneline-updater.py > /dev/null 2>&1 &")
+os.system('sudo ln -s ' + bin_path + "/oneline > /dev/null 2>&1 &")
+os.system('sudo ln -s ' + bin_path + "/oneline.pid.txt > /dev/null 2>&1 &")
+os.system('sudo ln -s ' + bin_path + "/onelined > /dev/null 2>&1 &")
+os.system('sudo ln -s ' + bin_path + "/oneline-client > /dev/null 2>&1 &")
+os.system('sudo ln -s ' + bin_path + "/oneline-server > /dev/null 2>&1 &")
+
+""" link the modules and configs """
+os.system('mkdir ' + lpath + "oneline/")
+os.chdir(lpath + "oneline/")
+os.system('sudo ln -s ' + mod_path + " > /dev/null 2>&1 &")
+os.system('sudo ln -s ' + conf_path + " > /dev/null 2>&1 &")
+os.system('sudo ln -s ' + js_path +  "/oneline.min.js > /dev/null 2>&1 &")
+
+os.chdir(path)
+os.system('sudo cp ' + bpath + '/service /etc/init.d/oneline > /dev/null 2>&1 &')
+os.system('sudo chkconfig --add oneline')
+os.system('sudo chkconfig oneline on')
+
+os.chdir(path)
+
+print """
+Oneline binaries stored in: {0} \n
+Oneline modules and configs stored in {1} \n
+""".format(fpath, lpath + "oneline/")
+
+
+print """Available oneline commands: \n
+oneline (same as server)
+oneline-server
+oneline-client
+"""
