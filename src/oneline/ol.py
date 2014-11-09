@@ -445,7 +445,7 @@ class server(object):
 		elif os.path.exists('./socket/'):
 			piddir = './socket/'
 		else:
-			piddir = '../../socket/'
+			piddir = '/usr/local/oneline/socket/'
 
 		plugin(cherrypy.engine).subscribe()
 		cherrypy.process.plugins.PIDFile(cherrypy.engine, piddir + 'oneline.pid.txt').subscribe()
