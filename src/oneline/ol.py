@@ -414,7 +414,7 @@ class server(object):
 			os.chdir('./conf')
 			f = open('./Main.conf').read()
 		else:
-			os.chdir('/usr/local/conf')
+			os.chdir('/usr/local/oneline/conf')
 			f = open('./Main.conf').read()	
 
 		try:
@@ -469,8 +469,8 @@ class server(object):
 			os.chdir('./modules')
 			files = os.listdir('./')
 		else:
-			os.chdir('/usr/local/modules')
-			files = os.listdir('/usr/local/modules')		
+			os.chdir('/usr/local/oneline/modules')
+			files = os.listdir('/usr/local/oneline/modules')		
 
 		config = dict()
 		salt = ''
@@ -623,8 +623,8 @@ class storage(object):
 						has_config = True
 						f = open(config_name, 'r+').read()
 				else:
-					os.chdir('/usr/local/conf')
-					prefix = '/usr/local/conf'
+					os.chdir('/usr/local/oneline/conf')
+					prefix = '/usr/local/oneline/conf'
 
 					if os.path.isfile(config_name):
 						has_config = True
