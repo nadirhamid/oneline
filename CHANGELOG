@@ -3,3 +3,40 @@ oneline changelog
 
 Version 0.1.0
 ----------------
+- Initial oneline support
+- WebSocket integration with ws4py, cherry2py
+
+0.2.0
+--------------
+
+- DB integration with MySQL, PostGres, MongoDB
+- Example modules
+- Geolocation object
+- Event object 0.1.0
+
+0.2.2
+------------
+
+- Random, sound objects
+- Time object
+- Memcached support
+
+0.3.0
+-----------
+
+- Multiplexing
+- debug logging
+- database integration fixes
+
+0.4.0 
+----------
+
+- Updates for database (joins, unions, omit) features
+- Better written server, customization on client library
+- Support for event style streaming
+
+0.5.0
+---------
+
+- Command line features for client, server
+- ability to create modules in any directory
