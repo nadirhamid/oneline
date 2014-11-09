@@ -150,7 +150,7 @@ class {0}(ol.module):
 				os.system("pkill -f 'python /usr/bin/oneline-cli.py'")
 			if 'restart' in dir(self):
 				""" TODO add graceful shutdown """
-				self.o.show("Stopping server..")
+				print "Stopping server.."
 				os.system("pkill -f 'python /usr/bin/oneline-cli.py'")
 
 				time.sleep(1)
