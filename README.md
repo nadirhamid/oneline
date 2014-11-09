@@ -5,12 +5,29 @@ Oneline  (A Python Project)
 Oneline adds real time streaming to your web app's data
 
 
+
 What you will find
 =========================================================
 
 In oneline you will find a series of server and client modules that work together
 to stream data in your web apps. This data can then be refined and served in a variety
 of ways.
+
+Getting Started (command line)
+=================================================
+
+Before anything you should:
+
+	bootstrap
+	
+this will install oneline and its dependancies
+
+To make a simple module, do:
+
+	oneline-client --init "my_module"
+
+This will create the needed files for writing your first oneline module.
+I will return to this after.
 
 
 Some Examples
@@ -79,15 +96,6 @@ Event examples
 				                     
 				this.pipeline = ol.stream()
 			
-
-Getting Started (Installation) 
-=======================================================
-
-After cloning the code, simply run (within the project directory)
-
-	boostrap.sh
-	
-If all goes well, you should see the server start up.
 
 	
 To include the client side library
