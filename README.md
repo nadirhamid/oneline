@@ -79,15 +79,7 @@ Event examples
 -------------------------------------------------------
 
 
-1. Update according to some traits
-
-		class BurgerMod extends ol
-			opened: (message) ->
-				event = ol.event(title: 'burger')       
-				                     
-				this.pipeline = ol.stream()
-
-2. Filter data every 2000 coords moved, afterwards further refine with a city
+1. Filter data every 2000 coords moved, afterwards further refine with a city
 
 		class MultiMod extends ol
 			opened: (message) ->
