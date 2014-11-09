@@ -414,7 +414,7 @@ class server(object):
 			os.chdir('./conf')
 			f = open('./Main.conf').read()
 		else:
-			os.chdir('../../conf')
+			os.chdir('/usr/local/conf')
 			f = open('./Main.conf').read()	
 
 		try:
