@@ -40,3 +40,11 @@ Version 0.1.0
 
 - Command line features for client, server
 - ability to create modules in any directory
+
+0.5.2
+
+- Added sqlite3 support
+- more client features in command line utils. Includes:
+    --list a way to list all modules
+    --remove remove a module
+    --info info on a module

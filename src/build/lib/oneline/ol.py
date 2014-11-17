@@ -170,7 +170,15 @@ def scan_config(caller):
 	curr = os.getcwd()
 
 	try:
-		if os.path.exists('../../conf/'):
+
+		if os.path.exists('/usr/local/oneline/conf/'):
+			os.chdir('/usr/local/oneline/conf')
+			prefix = '/usr/local/oneline/conf'
+			if os.path.isfile(config_name):
+				has_config = True
+				f = open(os.path.realpath(config_name), 'r+').read()
+	
+		elif os.path.exists('../../conf/'):
 			os.chdir('../../conf')
 			prefix = '../../conf'
 
@@ -414,7 +422,7 @@ class server(object):
 			os.chdir('./conf')
 			f = open('./Main.conf').read()
 		else:
-			os.chdir('../../conf')
+			os.chdir('/usr/local/oneline/conf')
 			f = open('./Main.conf').read()	
 
 		try:
@@ -445,7 +453,7 @@ class server(object):
 		elif os.path.exists('./socket/'):
 			piddir = './socket/'
 		else:
-			piddir = '../../socket/'
+			piddir = '/usr/local/oneline/socket/'
 
 		plugin(cherrypy.engine).subscribe()
 		cherrypy.process.plugins.PIDFile(cherrypy.engine, piddir + 'oneline.pid.txt').subscribe()
@@ -459,18 +467,28 @@ class server(object):
 
 		curr = os.getcwd()
 
-		if os.path.exists('../../modules/'):
-			os.chdir('../../modules')
-			files = os.listdir('./')
-		elif os.path.exists('../modules/'):
-			os.chdir('../modules')
-			files = os.listdir('./')		
-		elif os.path.exists('./modules/'):
-			os.chdir('./modules')
-			files = os.listdir('./')
+		""" first try master directory """
+		if os.path.exists('/usr/local/oneline/modules/'):
+			os.chdir('/usr/local/oneline/modules')
+			prefix = os.path.abspath('/usr/local/oneline/modules')
+			files = os.listdir('/usr/local/oneline/modules')		
 		else:
-			os.chdir('../../modules')
-			files = os.listdir('./')		
+			if os.path.exists('../../modules/'):
+				prefix = os.path.abspath('../../modules')
+				os.chdir('../../modules')
+				files = os.listdir('./')
+			elif os.path.exists('../modules/'):
+				os.chdir('../modules')
+				prefix = os.path.abspath('../modules')
+				files = os.listdir('./')		
+			elif os.path.exists('./modules/'):
+				os.chdir('./modules')
+				prefix = os.path.abspath('./modules')
+				files = os.listdir('./')
+			else:
+				os.chdir('/usr/local/oneline/modules')
+				prefix = os.path.abspath('/usr/local/oneline/modules')
+				files = os.listdir('/usr/local/oneline/modules')		
 
 		config = dict()
 		salt = ''
@@ -489,13 +507,20 @@ class server(object):
 			cname = re.sub('\.ol|\.py', '', i)
 			salt += '_' + i
 
+			if not os.path.isfile(os.path.realpath(i)):
+				continue
+
+			os.chdir(os.path.split(os.path.realpath(i))[0])	
 			module = __import__(cname, globals(), locals())
 
+			print cname
 			"""
 			open the file and determine its class
 			"""
 
 			f = open(i, 'r+').read()
+
+			os.chdir(prefix)
 
 			m = re.findall('class\s+([\w\_]+)\([\w\_\.]+\):', f)
 
@@ -509,7 +534,7 @@ class server(object):
 
 			config['/' + cname] = { 'tools.websocket.on': True,
 							  	    'request.module_md5': hashlib.md5(f).hexdigest(),
-							  	    'request.module_ctime': os.path.getmtime(i),
+							  	    'request.module_ctime': os.path.getmtime(os.path.realpath(i)),
 							  	    'request.module_object': module,
 							  	    'request.module_logger': logger(module_name),
 							  	    'request.module_uuid': uuid.uuid4().__str__(),
@@ -520,7 +545,7 @@ class server(object):
 
 			config['/' + module_name] = { 'tools.websocket.on': True,
 										  'request.module_md5': hashlib.md5(f).hexdigest(),
-										  'request.module_ctime': os.path.getmtime(i),
+										  'request.module_ctime': os.path.getmtime(os.path.realpath(i)),
 										  'request.module_object': module,
 							  	    	  'request.module_logger': logger(module_name),
 								  	      'request.module_uuid': uuid.uuid4().__str__(),
@@ -597,7 +622,15 @@ class storage(object):
 
 		if table == '':
 			try:
-				if os.path.exists('../../conf/'):
+				if os.path.exists('/usr/local/oneline/conf'):
+					os.chdir('/usr/local/oneline/conf')
+					prefix = '/usr/local/oneline/conf'
+
+					if os.path.isfile(os.path.realpath(config_name)):
+						has_config = True
+						f = open(os.path.realpath(config_name), 'r+').read()
+
+				elif os.path.exists('../../conf/'):
 					os.chdir('../../conf')
 					prefix = '../../conf'
 
@@ -620,8 +653,8 @@ class storage(object):
 						has_config = True
 						f = open(config_name, 'r+').read()
 				else:
-					os.chdir('../../conf')
-					prefix = '../../conf'
+					os.chdir('/usr/local/oneline/conf')
+					prefix = '/usr/local/oneline/conf'
 
 					if os.path.isfile(config_name):
 						has_config = True
@@ -686,6 +719,12 @@ class storage(object):
 				except:
 					pass
 
+				try:
+					dbfolder = re.findall("db_omit\s+\=\s+(.*)", f)[0] # for sqlite
+				except:
+					dbfolder = "/usr/bin/"
+
+
 
 		if db_type in ['mongodb']:
 			host = host + ':' + port
@@ -699,7 +738,10 @@ class storage(object):
 		if db_type in ['couchdb']:
 			_OL_DB = self.db = DAL(db_type + '://' + host + ':5984/')
 		else:
-			_OL_DB = self.db = DAL(db_type + '://' + username + ':' + password + '@' + host + '/' + database, pool_size=1, migrate_enabled=False)
+			if db_type == 'sqlite':
+				_OL_DB = self.db = DAL('sqlite://' + database + '.db', migrate_enabled=False, folder=dbfolder, auto_import=True)	
+			else:	
+				_OL_DB = self.db = DAL(db_type + '://' + username + ':' + password + '@' + host + '/' + database, pool_size=1, migrate_enabled=False)
 
 		_OL_TABLE = table
 
@@ -709,6 +751,7 @@ class storage(object):
 		"""
 		parse the tables
 		"""
+
 
 		if db_type in ['mysql']:
 
@@ -722,22 +765,29 @@ class storage(object):
 			except:
 				pass
 
-
+		elif db_type in ['sqlite']:
+			tables = self.db.executesql('SELECT name FROM sqlite_master WHERE type = "table"') 
 
 		elif db_type in ['postgres']:
 
 			tables = self.db.executesql("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE';")
+
 
 		if not db_type in ['mongodb', 'couchdb']:
 
 			for i in tables:
 				table_name = i[0]
 
+				print table_name
 				args = []
 				args.append(table_name)
 
 				if db_type in ['mysql']:
 					schema = self.db.executesql('explain ' + i[0])
+
+				elif db_type in ['sqlite']:
+					schema = self.db.executesql('PRAGMA table_info({0});'.format(i[0]))
+					
 				elif db_type in ['postgres']:
 					schema = self.db.executesql("select column_name, data_type, character_maximum_length from INFORMATION_SCHEMA.COLUMNS where table_name = '" + i[0] + "';")
 
@@ -745,10 +795,16 @@ class storage(object):
 					"""
 					structure is as follows:
 					{0 -> field_name, 1 -> type, 2 -> type, 3 ->, 4 -> default, 5 ->}
+					for sqlite:
+					{0 -> int count, 1 -> field_name, 3 -> type }
 					"""
+					if db_type in ['sqlite']:
+						args.append(Field(j[1]))
+					else:
+						args.append(Field(j[0]))
 
-					args.append(Field(j[0]))
 
+				print args
 				self.db.define_table(*args)
 
 			if not table in self.db.tables:
