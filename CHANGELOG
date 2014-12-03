@@ -42,9 +42,24 @@ Version 0.1.0
 - ability to create modules in any directory
 
 0.5.2
+--------
 
 - Added sqlite3 support
 - more client features in command line utils. Includes:
     --list a way to list all modules
     --remove remove a module
     --info info on a module
+
+0.5.5
+------
+Major:
+- Support for streams using (PHP, Perl, Ruby or Python)
+	- streams called with "ol_stream_with" more in /conf/StreamMod.conf & /modules/StreamMod.py
+- fixes in config. 
+- "init-stream" in oneline-client. Will make a stream linked to
+  oneline's streams directory
+- Stronger support for linux. 
+
+Minor:
+- mariadb placeholder for MySQL.
+   use like: db_type = 'mariadb'

@@ -59,6 +59,12 @@ OBJS = [
 			"time",
 			"writer"
 	   ]
+PCCS = {
+		"py": "python",
+		"php": "php",
+		"pl": "perl",
+		"rb": "ruby"
+       }
 
 """
 update this table
@@ -178,35 +184,6 @@ def scan_config(caller):
 				has_config = True
 				f = open(os.path.realpath(config_name), 'r+').read()
 	
-		elif os.path.exists('../../conf/'):
-			os.chdir('../../conf')
-			prefix = '../../conf'
-
-			if os.path.isfile(config_name):
-				has_config = True
-				f = open(config_name, 'r+').read()
-
-		elif os.path.exists('../conf/'):
-			os.chdir('../conf')
-			prefix = '../conf'
-
-			if os.path.isfile(config_name):
-				has_config = True
-				f = open(config_name, 'r+').read()
-
-		elif os.path.exists('./conf/'):
-			os.chdir('./conf')
-			prefix = './conf'
-			if os.path.isfile(config_name):
-				has_config = True
-				f = open(config_name, 'r+').read()
-		else:
-			os.chdir('../../conf')
-			prefix = '../../conf'
-
-			if os.path.isfile(config_name):
-				has_config = True
-				f = open(config_name, 'r+').read()
 	except:
 		pass
 	pass
@@ -220,98 +197,109 @@ def scan_config(caller):
 			pass	
 		pass
 	else:
-		try:
-			config['broadcast'] = re.findall("ol_broadcast\s+\=\s+\'(.*)\'", f)[0]
-			frequency = re.findall("ol_freq\s+\=\s+\'(.*)\'", f)
+		broadcast = re.findall("ol_broadcast\s+\=\s+\'(.*)\'", f)
+		if len(broadcast) > 0:
+			config['broadcast'] = broadcast[0]
+		else:
+			config['broadcast'] = 'multiple'
 
-			if frequency:
-				config['freq'] = frequency[0]
+		frequency = re.findall("ol_freq\s+\=\s+\'(.*)\'", f)
 
-			logging = re.findall("ol_logging\s+\=\s+\'(.*)\'", f)
+		if len(frequency) > 0:
+			config['freq'] = frequency[0]
 
-			if logging:
-				config['logging'] = logging[0]
+		logging = re.findall("ol_logging\s+\=\s+\'(.*)\'", f)
+
+		if len(logging) > 0:
+			config['logging'] = logging[0]
+		else:
+			config['logging'] = True
 
 
-			peers = re.findall("ol_peers\s+\=\s+(\d+)", f)
-			
-			if peers:
-				config['peers'] = peers[0]
+		peers = re.findall("ol_peers\s+\=\s+(\d+)", f)
+		
+		if len(peers) > 0:
+			config['peers'] = peers[0]
 
-			mc = re.findall("ol_memcache\s+\=\s+\'(.*)\'", f)
+		mc = re.findall("ol_memcache\s+\=\s+\'(.*)\'", f)
 
-			if mc:
-				config['memcache'] = True
-				try:
-					config['memcache_client'] = memcache.Client(['127.0.0.1:11211'], debug=0)
-				except:
-					config['memcache'] = False
-					config['memcache_client'] = False
-			else:
+		if len(mc) > 0:
+			config['memcache'] = True
+			try:
+				config['memcache_client'] = memcache.Client(['127.0.0.1:11211'], debug=0)
+			except:
 				config['memcache'] = False
+				config['memcache_client'] = False
+		else:
+			config['memcache'] = False
 
-			multi = re.findall("ol_multiplex\s+\=\s+\'(.*)\'", f)
+		multi = re.findall("ol_multiplex\s+\=\s+\'(.*)\'", f)
 
-			if multi:
-				config['multiplex'] = True
-				config['multiplex'] = multi[0]
+		if len(multi) > 0:
+			config['multiplex'] = True
+			config['multiplex'] = multi[0]
 
-			upstream = re.findall("ol_upstream\s+\=\s+\'(.*)\'", f)
+		upstream = re.findall("ol_upstream\s+\=\s+\'(.*)\'", f)
 
+		if len(upstream) > 0:
+			if upstream[0] == 'yes':
+				config['upstream'] = True
+			else:
+				config['upstream'] = False
+		else:
 			config['upstream'] = False
 
-			try:
-				if upstream[0] == 'yes':
-					config['upstream'] = True
-				else:
-					config['upstream'] = False
-			except:
-				config['upstream'] = False
+		## now find
+		## its cluster
+		cluster = re.findall("ol_cluster\s+\=\s+\'(.*)\'", f)
+		if len(cluster) > 0:
+			clusterblob = re.findall("ol_cluster\s+\=\s+(.*)", f)[0]
+			config['cluster'] = re.findall("'([\w\d\.]+)'", clusterblob)
+		else:
+			config['cluster'] = False
 
-			## now find
-			## its cluster
-			cluster = re.findall("ol_cluster\s+\=\s+\'(.*)\'", f)
-			try: 
-				clusterblob = re.findall("ol_cluster\s+\=\s+(.*)", f)[0]
-				config['cluster'] = re.findall("'([\w\d\.]+)'", clusterblob)
-			except:
-				config['cluster'] = False
-
-			downstream = re.findall("ol_downstream\s+\=\s+\'(.*)\'", f)
-			if downstream:
-				if downstream[0] == 'yes':
-					config['downstream'] = True
-				else:
-					config['downstream'] = False
+		downstream = re.findall("ol_downstream\s+\=\s+\'(.*)\'", f)
+		if len(downstream) > 0:
+			if downstream[0] == 'yes':
+				config['downstream'] = True
 			else:
 				config['downstream'] = False
+		else:
+			config['downstream'] = False
 
-			dispacher = re.findall("ol_dispatcher\s+\=\s+\'(.*)\'", f)
-			if dispatcher:
-				config['dispatcher'] = dispatcher[0]
-			else:
-				config['dispatcher'] = False
+		"""
+		dispacher = re.findall("ol_dispatcher\s+\=\s+\'(.*)\'", f)
+		if len(dispatcher) > 0:
+			config['dispatcher'] = dispatcher[0]
+		else:
+			config['dispatcher'] = False
 
-			dispatcher = re.findall("ol_dispatcher_address\s+\=\s+\'(.*)\'", f)
-			if dispatcher:
-				config['dispatcher_address'] = dispatcher[0]
-			else:
-				config['dispatcher_address'] = False
+		dispatcher = re.findall("ol_dispatcher_address\s+\=\s+\'(.*)\'", f)
+		if dispatcher:
+			config['dispatcher_address'] = dispatcher[0]
+		else:
+			config['dispatcher_address'] = False
 
-			dispatcher = re.findall("ol_dispatcher_port\s+\=\s+\'(.*)\'", f)
-			if dispatcher:
-				config['dispatcher_port'] = dispatcher[0]
-			else:
-				config['dispatcher_port'] = False
+		dispatcher = re.findall("ol_dispatcher_port\s+\=\s+\'(.*)\'", f)
+		if dispatcher:
+			config['dispatcher_port'] = dispatcher[0]
+		else:
+			config['dispatcher_port'] = False
 
-			dispatcher = re.findall("ol_dispatcher_timeout\s+\=\s+\'(.*)\'", f)
-			if dispatcher:
-				config['dispatcher_timeout'] = dispatcher[0]
-			else:
-				config['dispatcher_timeout'] = 10
+		dispatcher = re.findall("ol_dispatcher_timeout\s+\=\s+\'(.*)\'", f)
+		if dispatcher:
+			config['dispatcher_timeout'] = dispatcher[0]
+		else:
+			config['dispatcher_timeout'] = 10
+		"""
 
-		except:
-			pass
+		stream = re.findall("ol_stream_into\s+\=\s+\'(.*)\'", f)
+		if len(stream) > 0:
+			stream[0] = re.sub("stream:\/\/", "/usr/local/oneline/streams/", stream[0])
+			config['stream_into'] = stream[0]
+		else:
+			config['stream_into'] = False 
+
 
 	os.chdir(curr)
 	return config
@@ -412,18 +400,9 @@ class server(object):
 
 		curr = os.getcwd()
 
-		if os.path.exists('../../conf/'):
-			os.chdir('../../conf')
-			f = open('./Main.conf').read()
-		elif os.path.exists('../conf/'):
-			os.chdir('../conf')
-			f = open('./Main.conf')		
-		elif os.path.exists('./conf/'):
-			os.chdir('./conf')
-			f = open('./Main.conf').read()
-		else:
+		if os.path.exists('/usr/local/oneline/conf'):
 			os.chdir('/usr/local/oneline/conf')
-			f = open('./Main.conf').read()	
+			f = open('/usr/local/oneline/conf/Main.conf').read()	
 
 		try:
 			host = re.findall("ol_host\s+\=\s+\'(.*)\'", f)[0]
@@ -446,13 +425,7 @@ class server(object):
 				        SERVERS['port']: port,
 					SERVERS['path']: path})	
 
-		if os.path.exists('../../socket/'):
-			piddir = '../../socket/'
-		elif os.path.exists('../socket/'):
-			piddir = '../socket/'
-		elif os.path.exists('./socket/'):
-			piddir = './socket/'
-		else:
+		if os.path.exists('/usr/local/oneline/socket/'):
 			piddir = '/usr/local/oneline/socket/'
 
 		plugin(cherrypy.engine).subscribe()
@@ -513,7 +486,6 @@ class server(object):
 			os.chdir(os.path.split(os.path.realpath(i))[0])	
 			module = __import__(cname, globals(), locals())
 
-			print cname
 			"""
 			open the file and determine its class
 			"""
@@ -630,35 +602,6 @@ class storage(object):
 						has_config = True
 						f = open(os.path.realpath(config_name), 'r+').read()
 
-				elif os.path.exists('../../conf/'):
-					os.chdir('../../conf')
-					prefix = '../../conf'
-
-					if os.path.isfile(config_name):
-						has_config = True
-						f = open(config_name, 'r+').read()
-
-				elif os.path.exists('../conf/'):
-					os.chdir('../conf')
-					prefix = '../conf'
-
-					if os.path.isfile(config_name):
-						has_config = True
-						f = open(config_name, 'r+').read()
-
-				elif os.path.exists('./conf/'):
-					os.chdir('./conf')
-					prefix = './conf'
-					if os.path.isfile(config_name):
-						has_config = True
-						f = open(config_name, 'r+').read()
-				else:
-					os.chdir('/usr/local/oneline/conf')
-					prefix = '/usr/local/oneline/conf'
-
-					if os.path.isfile(config_name):
-						has_config = True
-						f = open(config_name, 'r+').read()
 			except:
 				pass
 
@@ -725,6 +668,9 @@ class storage(object):
 					dbfolder = "/usr/bin/"
 
 
+		""" treat mariadb as mySQL """
+		if db_type in ['mariadb']:
+			db_type = 'mysql'	
 
 		if db_type in ['mongodb']:
 			host = host + ':' + port
@@ -778,7 +724,6 @@ class storage(object):
 			for i in tables:
 				table_name = i[0]
 
-				print table_name
 				args = []
 				args.append(table_name)
 
@@ -804,7 +749,6 @@ class storage(object):
 						args.append(Field(j[0]))
 
 
-				print args
 				self.db.define_table(*args)
 
 			if not table in self.db.tables:
@@ -942,7 +886,7 @@ class pipeline(object):
 		else:
 			self.caller.freq = int(self.config['freq'])
 
-		if 'memcache' in self.config.keys():
+		if self.config['memcache']:
 			if 'memcache_client' in self.config.keys():
 				self.memcache = self.config['memcache_client'] if self.config['memcache_client'] \
 															   else None
@@ -1064,7 +1008,6 @@ class pipeline(object):
 
 				_time.sleep(self.caller.freq)
 				return
-
 
 
 		if len(re.findall(r'interop', message.__str__())) > 0:
@@ -1282,6 +1225,7 @@ class pipeline(object):
 			except:
 				self.logger.append(dict(message="Unable to bind socket to upstream", object=self.__str__()))
 
+
 		"""
 		if results are met
 		we need to run the
@@ -1340,6 +1284,38 @@ class pipeline(object):
 				pass
 
 
+		""" stream output into another file """
+		""" we recognize the following file types: """
+		""" .php, .py, .pl, .rb, and .txt """
+		""" first four will invoke their interpreter. .txt will """
+		""" merely dump contents """
+		""" fix for subprocess """
+		""" NOTE: interop data in this case should always be JSON to  """
+		""" let ease of integration. For this cause it is best to use 'JSON' as """
+		""" interop when using stream_into """
+		if self.config['stream_into']:
+			type = re.findall("\.(\w+)$", self.config['stream_into'])
+			if len(type) > 0:
+				inter = type[0]
+
+			try:
+				if inter == 'php':
+					os.system("php {0} '{1}'".format(os.path.abspath(self.config['stream_into']), json.dumps(m)))
+
+				elif inter == 'py':
+					os.system("python {0} '{1}'".format(self.config['stream_into'], json.dumps(m)))
+
+				elif inter == 'pl':
+					os.system("perl {0} '{1}'".format(self.config['stream_into'], json.dumps(m)))
+
+				elif inter == 'rb':
+					os.system("ruby {0} '{1}'".format(self.config['stream_into'], json.dumps(m)))
+
+			except:
+				self.logger.append(dict(message="Unable to call ScriptingEngine for {1}".format(inter), object=self.__str__()))
+
+
+
 		if not self.memcache is None:
 			salt = hashlib.md5(message.__str__()).hexdigest()
 			self.memcache.set(salt, bytes)
@@ -1356,18 +1332,8 @@ class logger(object):
 	def __init__(self, module_name):
 		curr = os.getcwd()
 
-		if os.path.exists('../../logs/'):
-			self.prefix = '../../logs/'
-			os.chdir('../../logs')
-		elif os.path.exists('../logs/'):
-			self.prefix = '../logs/'
-			os.chdir('../logs/')
-		elif os.path.exists('./logs/'):
-			self.prefix = './logs/'
-			os.chdir('./logs')
-		else:
-			self.prefix = '../../logs/'
-			os.chdir('../../logs')
+		if os.path.exists('/usr/local/oneline/logs/'):
+			self.prefix = '/usr/local/oneline/logs/'
 
 		today = datetime.datetime.today()
 		datestamp = today.strftime('%d-%b-%Y')
@@ -1386,14 +1352,8 @@ class logger(object):
 
 	def append(self, data):
 		curr = os.getcwd()
-		if os.path.exists('../../logs/'):
-			os.chdir('../../logs')
-		elif os.path.exists('../logs/'):
-			os.chdir('../logs/')
-		elif os.path.exists('./logs/'):
-			os.chdir('./logs')
-		else:
-			os.chdir('../../logs')
+		if os.path.exists('/usr/local/oneline/logs/'):
+			self.prefix = '/usr/local/oneline/logs/'
 
 		if not 'time' in data.keys():
 			today = datetime.datetime.today()

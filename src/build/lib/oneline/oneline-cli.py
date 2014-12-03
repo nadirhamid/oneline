@@ -43,6 +43,8 @@ class Runtime(object):
 				self.port = j
 			if i in ['-i', '--ip']:
 				self.ip = j
+			if i in ['init-stream']:
+				self.initstream = j 
 			if i in ['-d', '--daemon']:
 				self.daemon = True
 			if i in ['-l', '--list']:
@@ -67,6 +69,12 @@ class Runtime(object):
 			mods = os.listdir(modpath)
 			for i in mods:
 				print "Module: {0}".format(i)
+
+		if 'initstream' in dir(self):
+			f = open(os.path.abspath(self.initstream), "w+")
+			os.system("ln -s /usr/local/oneline/streams/ {0}".format(self.initstream))
+			print "Linked a new stream successfully!"
+			print "Use like: stream://{0}".format(self.initstream)
 
 		if self.type == 'CLIENT':
 			if 'init' in dir(self):
@@ -232,10 +240,12 @@ options:
 
 CLIENT SPECIFIC
 init, --init     Create a new module
+init-stream      Link a stream to the home of streams (makes it accessible via: stream://)
 -i, --info       Info on a module
 -r, --remove     Permantly delete a module  
 -l, --list       List of all available modules
 -e, --edit       Edit a module by name
+
 
 SERVER SPECIFIC
 -g, --graceful  Perform a graceful shutdown
