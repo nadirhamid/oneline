@@ -63,3 +63,13 @@ Major:
 Minor:
 - mariadb placeholder for MySQL.
    use like: db_type = 'mariadb'
+
+0.5.7
+-----
+- WebUI for oneline 
+  - access like:
+      oneline --init-ui
+      will show port, ip oneline ui is running on
+      ui currently supports:
+         module showcase
+- support for java based streaming. use with jar or .java files

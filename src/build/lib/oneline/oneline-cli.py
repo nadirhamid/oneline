@@ -2,7 +2,9 @@ import sys
 import os
 import shutil
 import re
+import cherrypy
 from oneline import ol
+
 class Runtime(object):
 	def __init__(self, args):
 		self.args = args
@@ -51,7 +53,13 @@ class Runtime(object):
 				self.list = True
 			if i in ['-e', '--edit']:
 				self.edit = j
-
+			if i in ['--start-ui', '--init-ui', '--ui']:
+				self.ip = '127.0.0.1'
+				self.port = 991
+				self.ui = True
+			if i in ['--status']:
+				self.status = True
+				
 			
 		if 'help' in dir(self):
 			self._help()
@@ -60,6 +68,19 @@ class Runtime(object):
 		self.perform()
 
 	def perform(self):
+		if 'ui' in dir(self):
+			print "Attempting to start Oneline WebUI"
+
+			SERVERS = dict(host='server.socket_host', port='server.socket_port', path='tools.staticdir.root')
+			from oneline import ui
+			cherrypy.config.update({ SERVERS['host']: self.ip,
+			SERVERS['port']: self.port})
+
+			SERVER = ui.OnelineUI(self.ip, self.port)
+			cherrypy.quickstart(SERVER, '')
+
+			print "Oneline UI running on {0}:{1}".format(self.ip, self.port)
+			
 		if 'edit' in dir(self):
 			print "Opening {0} for editing..".format(self.edit)
 			os.system("vim /usr/local/oneline/modules/{0}.py".format(self.edit))
@@ -69,6 +90,14 @@ class Runtime(object):
 			mods = os.listdir(modpath)
 			for i in mods:
 				print "Module: {0}".format(i)
+
+
+		""" returns the status of oneline """
+		""" where the status can be one of following """
+		""" running, stopped, waiting """
+		if 'status' in dir(self):
+			pass
+			
 
 		if 'initstream' in dir(self):
 			f = open(os.path.abspath(self.initstream), "w+")
@@ -255,6 +284,9 @@ SERVER SPECIFIC
 -st, --status   Is the server running or stopped
 -ip, --ip       Add custom ip to init
 -port, --port   Add custom port to init
+
+UI SPECIFIC
+--init-ui      starts the oneline ui at the default port
 """
 
 if __name__ == '__main__':

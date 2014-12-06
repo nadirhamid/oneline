@@ -1,0 +1,445 @@
+<!DOCTTYPE>
+<html>
+<head>
+<title>Oneline WebUI</title>
+</head>
+<body>
+
+<!-- DC Message Box CSS -->
+<link type="text/css" rel="stylesheet" href="http://cdn.dcodes.net/2/message_box/css/dc_message_box.css" />
+<!-- jQuery Library (skip this step if already called on page ) -->
+<script type="text/javascript" src="http://cdn.dcodes.net/2/jquery.min.js"></script> <!-- (do not call twice) -->
+<!-- DC Message Box JS -->
+<script type="text/javascript" src="http://cdn.dcodes.net/2/message_box/js/jquery.cookie.js"></script>
+<script type="text/javascript" src="http://cdn.dcodes.net/2/message_box/js/dc_message_box.js"></script>
+<link type="text/css" rel="stylesheet" href="http://cdn.dcodes.net/2/tables2/css/dc_tables2.css" />
+
+<style>
+/**
+ * Inline Oneline styles
+ * could've done it through a sheet?
+ */
+.round-button { display:inline-block; text-decoration:none; outline:none; cursor:pointer; font:bold 12px/1em HelveticaNeue, Arial, sans-serif; padding:8px 11px; color:#555; text-shadow:0 1px 0 #fff; background:#f5f5f5; background:-webkit-gradient(linear, left top, left bottom, from(#f9f9f9), to(#f0f0f0)); background:-moz-linear-gradient(top, #f9f9f9, #f0f0f0); border:1px solid #dedede; border-color:#dedede #d8d8d8 #d3d3d3; -webkit-border-radius:4px; -moz-border-radius:4px; border-radius:4px; -webkit-box-shadow:0 1px 2px #eaeaea, inset 0 1px 0 #fbfbfb; -moz-box-shadow:0 1px 2px #eaeaea, inset 0 1px 0 #fbfbfb; box-shadow:0 1px 2px #eaeaea, inset 0 1px 0 #fbfbfb; }
+.round-button:hover,
+.round-button:focus { color:#555; background:#efefef; background:-webkit-gradient(linear, left top, left bottom, from(#f9f9f9), to(#e9e9e9)); background:-moz-linear-gradient(top, #f9f9f9, #e9e9e9); border-color:#ccc; -webkit-box-shadow:0 2px 1px #e0e0e0, inset 0 1px 0 #fbfbfb; -moz-box-shadow:0 2px 1px #e0e0e0, inset 0 1px 0 #fbfbfb; box-shadow:0 1px 2px #e0e0e0, inset 0 1px 0 #fbfbfb;}
+.round-button:active { position:relative; top:1px; color:#555; background:#efefef; background:-webkit-gradient(linear, left top, left bottom, from(#eaeaea), to(#f4f4f4)); background:-moz-linear-gradient(top, #eaeaea, #f4f4f4); border-color:#c6c6c6; -webkit-box-shadow:0 1px 0 #fff, inset 0 0 5px #ddd; -moz-box-shadow:0 1px 0 #fff, inset 0 0 5px #ddd; box-shadow:0 1px 0 #fff, inset 0 0 5px #ddd;}
+.round-button.rounded { padding:8px 15px; -webkit-border-radius:15px; -moz-border-radius:15px; border-radius:15px;}
+input.round-button,
+button.round-button {  *width:auto; *overflow:visible;} /* IE7 Fix */
+.round-button img { border:none; vertical-align:bottom;}
+
+/* Small buttons */
+.round-button.small { padding:5px 11px; font-size:11px; font-weight:normal; -webkit-border-radius:3px; -moz-border-radius:3px; border-radius:3px;}
+.round-button.small.rounded { -webkit-border-radius:11px; -moz-border-radius:11px; border-radius:11px;}
+
+/*  Large buttons */
+.round-button.large { padding:12px 15px; font-size:20px; font-weight:normal; -webkit-border-radius:5px; -moz-border-radius:5px; border-radius:5px;}
+.round-button.large.rounded { padding:12px 22px; -webkit-border-radius:23px; -moz-border-radius:23px; border-radius:23px;}
+
+/* COLOR VARIATIONS */
+
+/* Light Blue */
+.round-button.light_blue { background:#92dbf6; background:-webkit-gradient(linear, left top, left bottom, from(#abe4f8), to(#6fcef3)); background:-moz-linear-gradient(top, #abe4f8, #6fcef3); border-color:#7cbdd5; color:#444; text-shadow:0 1px 0 #b6e6f9; -webkit-box-shadow:0 1px 2px #d6d6d6, inset 0 1px 0 #c0ebfa; -moz-box-shadow:0 1px 2px #d6d6d6, inset 0 1px 0 #c0ebfa; box-shadow:0 1px 2px #d6d6d6, inset 0 1px 0 #c0ebfa;}
+.round-button.light_blue:hover,
+.round-button.light_blue:focus { background:#85d6f5; background:-webkit-gradient(linear, left top, left bottom, from(#b1e9fd), to(#66c6ea)); background:-moz-linear-gradient(top, #b1e9fd, #66c6ea); border-color:#66a8bf; -webkit-box-shadow:0 0 1px #d6d6d6, inset 0 1px 0 #c0ebfa; -moz-box-shadow:0 0 1px #d6d6d6, inset 0 1px 0 #c0ebfa; box-shadow:0 0 1px #d6d6d6, inset 0 1px 0 #c0ebfa;}
+.round-button.light_blue:active { background:#92dbf6; border-color:#66a8bf; -webkit-box-shadow:0 1px 0 #fff, inset 0 0 5px #66a8bf; -moz-box-shadow:0 1px 0 #fff, inset 0 0 5px #66a8bf; box-shadow:0 1px 0 #fff, inset 0 0 5px #66a8bf;}
+
+/*  Blue */
+.round-button.blue { background:#377ad0; background:-webkit-gradient(linear, left top, left bottom, from(#52a8e8), to(#377ad0)); background:-moz-linear-gradient(top, #52a8e8, #377ad0); border-color:#4081af #2e69a3 #20559a; color:#fff; text-shadow:0 1px 1px #4081af; -webkit-box-shadow:0 1px 2px #d6d6d6, inset 0 1px 1px #72b9eb; -moz-box-shadow:0 1px 2px #d6d6d6, inset 0 1px 1px #72b9eb; box-shadow:0 1px 2px #d6d6d6, inset 0 1px 1px #72b9eb;}
+.round-button.blue:hover,
+.round-button.blue:focus { background:#206bcb; background:-webkit-gradient(linear, left top, left bottom, from(#3e9ee5), to(#206bcb)); background:-moz-linear-gradient(top, #3e9ee5, #206bcb); border-color:#2a73a6 #165899 #07428f; -webkit-box-shadow:0 1px 0 0 #fff, inset 0 1px 0 0 #62b1e9; -moz-box-shadow:0 1px 0 0 #fff, inset 0 1px 0 0 #62b1e9; box-shadow:0 1px 0 0 #fff, inset 0 1px 0 0 #62b1e9;}
+.round-button.blue:active { background:#3282d3; border-color:#154c8c #154c8c #0e408e; text-shadow:0 -1px 1px #1d62ab; -webkit-box-shadow:0 1px 0 0 #fff, inset 0 0 6px 3px #1657b5; -moz-box-shadow:0 1px 0 0 #fff, inset 0 0 6px 3px #1657b5; box-shadow:0 1px 0 0 #fff, inset 0 0 6px 3px #1657b5;}
+
+/*  Green */
+.round-button.green { background:#7fbf4d; background:-webkit-gradient(linear, left top, left bottom, from(#7fbf4d), to(#63a62f)); background:-moz-linear-gradient(top, #7fbf4d, #63a62f); border-color:#63a62f; color:#fff; text-shadow:0 1px 0 #53961e; -webkit-box-shadow:0 1px 2px #d6d6d6, inset 0 1px 0 #96d865; -moz-box-shadow:0 1px 2px #d6d6d6, inset 0 1px 0 #96d865; box-shadow:0 1px 2px #d6d6d6, inset 0 1px 0 #96d865;}
+.round-button.green:hover,
+.round-button.green:focus { background:#76b347; background:-webkit-gradient(linear, left top, left bottom, from(#86c755), to(#5ea12a)); background:-moz-linear-gradient(top, #86c755, #5ea12a); border-color:#53961e; -webkit-box-shadow:0 0 1px #d6d6d6, inset 0 1px 0 #96d865; -moz-box-shadow:0 0 1px #d6d6d6, inset 0 1px 0 #96d865; box-shadow:0 0 1px #d6d6d6, inset 0 1px 0 #96d865;}
+.round-button.green:active { background:#7fbf4d; border-color:#53961e; -webkit-box-shadow:0 1px 0 #fff, inset 0 0 5px #53961e; -moz-box-shadow:0 1px 0 #fff, inset 0 0 5px #53961e; box-shadow:0 1px 0 #fff, inset 0 0 5px #53961e;}
+
+@import 'lib/reset.css';
+
+@import 'lib/skeleton.css';
+body,
+html {
+  height: 100%;
+}
+body {
+  font-family: Helvetica, Arial, sans-serif;
+  color: #888888;
+  font-size: 100%;
+  line-height: 200%;
+  background: #FFFFFF;
+}
+a {
+  color: #00C0FF;
+  text-decoration: none;
+  -webkit-transition: all 0.2s ease-in-out;
+  -moz-transition: all 0.2s ease-in-out;
+  -o-transition: all 0.2s ease-in-out;
+  transition: all 0.2s ease-in-out;
+}
+a:hover {
+  color: red;
+}
+strong {
+  font-weight: 400;
+}
+ul.panels {
+  height: 100%;
+}
+ul.panels li.panel {
+  width: 100%;
+  min-height: 100%;
+  display: block;
+  position: relative;
+}
+ul.panels li.panel.panel_1 {
+  background: url('../images/background.jpg') no-repeat center center fixed;
+  -webkit-background-size: cover;
+  -moz-background-size: cover;
+  -o-background-size: cover;
+  background-size: cover;
+}
+ul.panels li.panel.panel_1 div.header {
+  padding: 70px 0;
+  color: white;
+}
+ul.panels li.panel.panel_1 div.header h1.logo {
+  font: 200 34px/39px 'Source Sans Pro', sans-serif;
+  text-transform: uppercase;
+  border: 2px solid white;
+  padding: 0 10px;
+  float: left;
+}
+ul.panels li.panel.panel_1 div.header ul {
+  float: right;
+}
+ul.panels li.panel.panel_1 div.header ul li {
+  float: left;
+  margin-left: 15px;
+  padding: 5px 0;
+}
+ul.panels li.panel.panel_1 div.header ul li a.twitter,
+ul.panels li.panel.panel_1 div.header ul li a.facebook,
+ul.panels li.panel.panel_1 div.header ul li a.mail {
+  height: 24px;
+  width: 24px;
+  display: block;
+  text-indent: -9999px;
+  overflow: none;
+  background-repeat: no-repeat;
+  opacity: .6;
+  -webkit-transition: all 0.2s ease-in-out;
+  -moz-transition: all 0.2s ease-in-out;
+  -o-transition: all 0.2s ease-in-out;
+  transition: all 0.2s ease-in-out;
+}
+ul.panels li.panel.panel_1 div.header ul li a.twitter:hover,
+ul.panels li.panel.panel_1 div.header ul li a.facebook:hover,
+ul.panels li.panel.panel_1 div.header ul li a.mail:hover {
+  opacity: 1;
+}
+ul.panels li.panel.panel_1 div.header ul li a.twitter {
+  background: url('../images/sprite.png') 0 -214px no-repeat;
+}
+ul.panels li.panel.panel_1 div.header ul li a.facebook {
+  background: url('../images/sprite.png') 0 -66px no-repeat;
+}
+ul.panels li.panel.panel_1 div.header ul li a.mail {
+  background: url('../images/sprite.png') 0 -140px no-repeat;
+}
+ul.panels li.panel.panel_1 h3 {
+  font: 600 34px/50px 'Source Sans Pro', sans-serif;
+  text-align: center;
+  color: white;
+}
+ul.panels li.panel.panel_1 div.timer {
+  color: white;
+  font-family: 'Source Sans Pro', sans-serif;
+  font-weight: 400;
+  font-size: 9.7em;
+  line-height: 1.2em;
+  text-align: center;
+}
+@media only screen and (max-width: 767px) {
+  ul.panels li.panel.panel_1 div.timer {
+    font-size: 4.1em;
+  }
+}
+@media only screen and (max-width: 959px) and (min-width: 768px) {
+  ul.panels li.panel.panel_1 div.timer {
+    font-size: 7.7em;
+  }
+}
+@media only screen and (max-width: 767px) and (min-width: 480px) {
+  ul.panels li.panel.panel_1 div.timer {
+    font-size: 5.7em;
+  }
+}
+ul.panels li.panel.panel_1 div.timer ul {
+  display: inline-block;
+}
+ul.panels li.panel.panel_1 div.timer ul li {
+  float: left;
+  text-align: center;
+}
+ul.panels li.panel.panel_1 div.timer ul li.seperator {
+  font-size: .7em;
+}
+ul.panels li.panel.panel_1 div.timer ul li p {
+  font-weight: 200;
+  font-size: 0.2em;
+  line-height: 1em;
+}
+ul.panels li.panel.panel_1 div.subscribe {
+  padding: 40px 0;
+}
+ul.panels li.panel.panel_1 div.subscribe h3 {
+  font: 400 24px/29px 'Source Sans Pro', sans-serif;
+  text-align: center;
+  color: white;
+}
+ul.panels li.panel.panel_1 div.subscribe form {
+  display: block;
+  width: 520px;
+  margin: 25px auto;
+  text-align: center;
+  color: white;
+}
+@media screen and (max-width: 900px) {
+  ul.panels li.panel.panel_1 div.subscribe form {
+    width: 100%;
+  }
+}
+ul.panels li.panel.panel_1 div.subscribe form .error_alert {
+  display: none;
+}
+ul.panels li.panel.panel_1 div.subscribe form .input {
+  width: 300px;
+  padding: 10px 15px;
+  margin: 0 10px;
+  border: 1px solid #ccc;
+  background: white;
+  display: inline-block;
+  -webkit-border-radius: 4px;
+  -moz-border-radius: 4px;
+  -o-border-radius: 4px;
+  border-radius: 4px;
+}
+@media screen and (max-width: 900px) {
+  ul.panels li.panel.panel_1 div.subscribe form .input {
+    width: auto;
+    margin: 0 0 10px;
+    display: block;
+  }
+}
+ul.panels li.panel.panel_1 div.subscribe form .input input {
+  border: 0;
+  line-height: 17px;
+  font-size: 14px;
+  outline: none;
+  width: 100%;
+}
+ul.panels li.panel.panel_1 div.subscribe form .input.error {
+  border-color: #d35959;
+}
+ul.panels li.panel.panel_1 div.subscribe form button {
+  padding: 18px 35px;
+  background: #00C0FF;
+  border: 0px;
+  color: white;
+  line-height: 17px;
+  font-size: 16px;
+  margin: 0 0 0 10px;
+  cursor: pointer;
+  -webkit-border-radius: 4px;
+  -moz-border-radius: 4px;
+  -o-border-radius: 4px;
+  border-radius: 4px;
+}
+ul.panels li.panel.panel_1 div.subscribe form button:hover {
+  background: #00A1DD;
+}
+@media screen and (max-width: 900px) {
+  ul.panels li.panel.panel_1 div.subscribe form button {
+    width: 100%;
+    margin-left: 0px;
+  }
+}
+ul.panels li.panel.panel_1 div.scroll {
+  position: absolute;
+  bottom: 0px;
+  width: 100%;
+  border-bottom: 10px solid white;
+}
+ul.panels li.panel.panel_1 div.scroll div {
+  font: 300 22px 'Source Sans Pro', sans-serif;
+  line-height: 53px;
+  text-align: center;
+  background: white;
+  display: block;
+  width: 250px;
+  height: 50px;
+  margin: 0 auto;
+  text-transform: uppercase;
+  cursor: pointer;
+  -webkit-border-radius: 10px 10px 0px 0px;
+  -moz-border-radius: 10px 10px 0px 0px;
+  -o-border-radius: 10px 10px 0px 0px;
+  border-radius: 10px 10px 0px 0px;
+}
+ul.panels li.panel.panel_1 div.scroll div span.arrow {
+  background: url('../images/sprite.png') 0 0 no-repeat;
+  height: 16px;
+  width: 16px;
+  display: inline-block;
+  margin-left: 10px;
+}
+ul.panels li.panel.panel_2 {
+  font-size: 15px;
+  line-height: 27px;
+}
+ul.panels li.panel.panel_2 p {
+  margin-bottom: 1.12em;
+}
+ul.panels li.panel.panel_2 h2 {
+  font: 400 2em/1em 'Source Sans Pro', sans-serif;
+  text-transform: none;
+  text-decoration: none;
+  color: #555;
+  margin: 1em 0;
+}
+ul.panels li.panel.panel_2 .left .features {
+  margin-top: 50px;
+}
+ul.panels li.panel.panel_2 .left .features ul {
+  list-style: none;
+  padding: 0px;
+  margin: 0px;
+  float: left;
+}
+ul.panels li.panel.panel_2 .left .features ul li {
+  margin-bottom: 30px;
+}
+@media screen and (max-width: 900px) {
+  ul.panels li.panel.panel_2 .left .features ul li {
+    width: 100%;
+  }
+}
+ul.panels li.panel.panel_2 .left .features ul li span {
+  color: #333;
+}
+ul.panels li.panel.panel_2 .left .features ul li p {
+  margin: 0;
+}
+ul.panels li.panel.panel_2 .left .features ul li img {
+  float: left;
+  margin: 5px 10px 0 0;
+}
+ul.panels li.panel.panel_2 .right #tweets {
+  height: 600px;
+  overflow: hidden;
+}
+ul.panels li.panel.panel_2 .right #tweets ul {
+  list-style: none;
+  padding: 0px;
+  margin: 0px;
+}
+ul.panels li.panel.panel_2 .right #tweets ul li {
+  min-height: 33px;
+  font-size: 12px;
+  line-height: 22px;
+  clear: both;
+  margin-bottom: 10px;
+  border-bottom: 1px dotted #ccc;
+  padding-bottom: 10px;
+}
+ul.panels li.panel.panel_2 .right #tweets ul li .tweet_avatar {
+  float: left;
+  border: 5px solid white;
+  margin-right: 10px;
+  line-height: 0px;
+  -webkit-border-radius: 100%;
+  -moz-border-radius: 100%;
+  -o-border-radius: 100%;
+  border-radius: 100%;
+}
+ul.panels li.panel.panel_2 .right #tweets ul li .tweet_avatar img {
+  width: 24px;
+  height: 24px;
+  -webkit-border-radius: 100%;
+  -moz-border-radius: 100%;
+  -o-border-radius: 100%;
+  border-radius: 100%;
+}
+ul.panels li.panel.footer {
+  background: #2C3337;
+  font-size: 12px;
+  min-height: 24px !important;
+  text-align: center;
+}
+
+body {
+    margin: 0;
+}
+
+.header {
+	padding: 10px 20px;
+	width 100%;
+	background: #F5F5F5;
+}
+ul.menu {
+	margin: 0;
+	padding: 0;
+}
+ul.menu li {
+	float: left;
+	padding: 3px;
+	margin-right: 10px;
+}
+</style>
+<div class="header">
+<h2>Oneline UI</h2>
+</div>
+
+<!-- DC Message Box Start -->
+	<!--
+  <div class="dc_message_box1 dc_no_bg {status_code} closeable">
+    <p><strong>{status_caption}</strong> {status_msg} Oneline is up and running! (host: 127.0.0.1, port: 8080)</p>
+  </div>
+	-->
+<!-- DC Message Box End -->
+<div style="padding: 10px; ">
+<div>
+	<ul class="menu">
+		<li class="round-button blue main-button">View Modules
+		</li>
+		<!--
+		<li class="round-button green main-button">Connected Clients</li>
+		<li class="round-button red main-button">Disconnected Clients</li>
+		-->
+	</ul>
+	<div style="clear: both; "></div>
+	<div style="border: 1px solid #E3E3E3; padding: 20px; margin-top: 20px; ">
+		<h3 style="margin-top: 0px; ">Loaded Modules</h3>
+		
+  <table class="dc_tables2_2" style="width:100%;">
+    <thead>
+      <tr>
+        <th scope="col">Name</th>
+        <!--<th scope="col">Info</th>-->
+      </tr>
+    </thead>
+    <tbody>
+	<tr id="modules">
+		{modules}
+	</tr>
+     </tbody>
+  </table>
+<!-- DC Table Styles II:2 End -->
+	</div>
+
+</div>
+
+</body>
+</html>

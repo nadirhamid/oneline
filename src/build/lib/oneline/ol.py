@@ -22,6 +22,11 @@ import uuid
 import random as _random
 import time as _time
 
+try:
+	import boto
+except:
+	pass
+
 from dal import DAL, Field
 from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
 from ws4py.websocket import WebSocket

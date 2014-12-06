@@ -22,6 +22,11 @@ import uuid
 import random as _random
 import time as _time
 
+try:
+	import boto
+except:
+	pass
+
 from dal import DAL, Field
 from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
 from ws4py.websocket import WebSocket
@@ -1310,6 +1315,15 @@ class pipeline(object):
 
 				elif inter == 'rb':
 					os.system("ruby {0} '{1}'".format(self.config['stream_into'], json.dumps(m)))
+
+				""" two step approach for java, compile and execute """
+				elif inter == 'java':
+					##os.system("javac {0}".format(self.config['stream_into']) 
+					os.system("java {0} {1}".format(self.config['stream_into'], json.dumps(m))
+
+				elif inter == 'jar':
+					os.system("java -jar {0} {1}".format(self.config['stream_into'], json.dumps(m))
+				
 
 			except:
 				self.logger.append(dict(message="Unable to call ScriptingEngine for {1}".format(inter), object=self.__str__()))
