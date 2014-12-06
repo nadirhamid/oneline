@@ -1,0 +1,14 @@
+All oneline logging will be stored here. Logs are stored
+in the following format: 
+
+{module_name}_{date}.log
+
+In each of these files you will find the errors, warnings
+and client connection attempts and failures.
+Each entry of the log follows this example:
+
+[time] - {client_ip} - {object} - [what_happened]
+
+A real example would be:
+
+[9/4/2014 3:09PM] - 127.0.0.1 - Geolocation Object - No 'lng', 'lat' coordinates provided

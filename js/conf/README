@@ -1,0 +1,11 @@
+All config files should be placed here.
+For module configs by default the file name 
+should be analagous to the module name i.e:
+
+--------------------------------------------------------
+MyGeolocationModule.py -> MyGeolocationModule.conf
+--------------------------------------------------------
+
+A full list of config options can be found in
+https://github.com/nadirhamid/oneline
+section configs

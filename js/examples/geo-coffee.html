@@ -1,0 +1,28 @@
+<html>
+    <head>
+      <script type='application/javascript' src='https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js'></script>
+    </head>
+    <body>
+    <form action='#' id='oneline' method='get'>
+        <h2>Oneline output</h2>
+        <textarea style='width: 100%; height: 80%; ' id='output' cols='1024' rows='2000' ></textarea>
+        <br />
+     </form>
+      <script type="text/coffeescript">
+
+        class GeoMod
+            open: (message) ->
+              ol.setup(server: 'GeoMod', limit: 20)
+              geo = ol.geo(range: 50.030303)
+
+              this.pipeline = ol.stream(pipeline: [geo])
+
+          geomod = new GeoMod()
+          geomod.open()
+
+      </script>
+      <script type='application/javascript' src='./bson.js'></script>
+      <script type='application/javascript' src='./oneline.js'></script>
+      <script type='text/javascript' src='./coffee.js'></script>
+    </body>
+</html>

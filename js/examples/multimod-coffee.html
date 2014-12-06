@@ -1,0 +1,29 @@
+<html>
+    <head>
+      <script type='application/javascript' src='https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js'></script>
+
+    </head>
+    <body>
+    <form action='#' id='oneline' method='get'>
+        <h2>Oneline output</h2>
+        <textarea style='width: 100%; height: 80%; ' id='output' cols='1024' rows='2000' ></textarea>
+        <br />
+     </form>
+      <script type="text/coffeescript">
+
+          class MultiMod
+              open: (message) ->
+                  ol.setup(module: 'MultiMod')
+                  geo = ol.geo(every: 2000, range: 2000)
+                  event = ol.event(city: ol.value('like', 'Vancouver'))
+
+                  this.pipeline = ol.stream(pipeline: [geo, event])
+
+          multimod = new MultiMod()
+          multimod.open()
+
+      </script>
+      <script type='application/javascript' src='http://cdn.getoneline.com/lib/oneline.min.0.5.0.js'></script>
+      <script type='text/javascript' src='./coffee.js'></script>
+    </body>
+</html>

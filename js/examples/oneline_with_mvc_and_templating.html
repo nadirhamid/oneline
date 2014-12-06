@@ -1,0 +1,78 @@
+<html>
+    <head>
+      <script type='application/javascript' src='https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js'></script>
+      <script type='application/javascript' src='./bson.js'></script>
+      <script type='application/javascript' src='./oneline.js'></script>
+      <script type='application/javascript' src='./handlebars.js'></script>
+    </head>
+    <body>
+    <form action='#' id='oneline' method='get'>
+        <div style="border: 1px solid #E3E3E3; padding: 20px; ">
+          <h2>Oneline output</h2>
+          <small>Streaming data with title "burger" <br />
+          using handlebars with backbone for frontend</small>
+        </div>
+        <textarea style='width: 100%; height: 80%; display: none;' id='output' cols='1024' rows='2000' ></textarea>
+        <br />
+     </form>
+<style>
+body { font-family: Arial, sans-serif; }
+.data
+{
+  list-style: none;
+}
+.data li
+{
+  padding: 10px;
+  background: #F5F5F5;
+  float: left;
+  margin: 10px;
+  border-radius 7px;
+}
+</style>
+<div id="data"></div>
+<script id="some-template" type="text/x-handlebars-template">
+    <ul class="data">
+    {{#things}}
+      <li>
+        <img width="128" height="128"/>
+        <br />
+        {{title}}
+      </li>
+    {{/things}}
+    </ul>
+</script>
+</div>
+     <!--
+        A test for BSON vs JSON in oneline this
+        file should be in a iframe along with its counterpart   
+      -->
+      <script type='application/javascript'>
+          var source = $("#some-template").html(); 
+          var template = Handlebars.compile(source); 
+
+          Handlebars.registerHelper('fullName', function(person) {
+             return person.firstName + " " + person.lastName;
+          });
+
+          Oneline.setup({ server: 'BurgerMod', interop: 'bson' });
+
+          var agent = Oneline.agent({ name: 'Jack Danny' });
+          var ev = Oneline.event({ title: O.value('like', 'chips') });
+          
+
+          Oneline.pipeline(agent, [ev], function(res) {
+              $('#data').text('');
+
+              var data = { things: res.data }; 
+
+              $('#data').append(template(data));
+
+              $('#output').html($('#output').html() + '\n' + JSON.stringify(res) + "\n");
+              $("#output").scrollTop($("#output")[0].scrollHeight);
+
+          }).run();
+          
+      </script>
+    </body>
+</html>

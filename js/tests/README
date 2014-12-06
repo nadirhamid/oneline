@@ -1,0 +1,17 @@
+In this directory you will find some performance based tests
+and unit tests. You can test the head 2 head performance of
+BSON and JSON, or NoSQL and SQL. In both cases we found
+the former performing better.
+
+As like examples, these files should go in a directory on your
+web server, afterwards can be opened inside a browser.
+
+More >>
+
+The SQL vs NoSQL example uses mongodb and mysql. For a
+more head 2 head example using (your databases) you can
+replace with postgres and couchdb.
+
+Unit tests can be found in ./unit_tests.html these
+are general purpose tests to measure oneline's productivity.
+Should any test fail, please email me @ matrix.nad@gmail.com

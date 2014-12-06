@@ -1,0 +1,27 @@
+Binaries
+----------------------------------------------------------------------
+
+These are actually not binaries and simply shell/batch scripts used
+to run or stop oneline.
+
+---------------------------------------------------------------------
+
+For help:
+
+oneline --help
+
+
+To run:
+
+oneline-server --start
+
+To stop:
+oneline-server --stop
+
+Using the client:
+
+Making new modules ->
+
+oneline-client --init "new_module"
+
+

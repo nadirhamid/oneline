@@ -1,0 +1,40 @@
+----------------------------------------------------------
+
+While running the files in this directory is possible
+To run these files with best results,
+you should move the js/html files to a public area on
+a web server. You should also make sure the modules files
+are in the modules folder and config files go in config. 
+Before running make sure the config matches the settings
+of your database.
+
+Next view one of the files in your browser.
+and if everything went right, you will see some
+output.
+
+More >>
+
+Running geo examples
+
+To run the geo examples, you should make sure the table in
+configuration has 'lng' and 'lat fields, these are used
+by the geo module and without it, it will throw an error
+
+Running event examples
+
+for events i've used an example that uses a field 'title'
+you should make sure the db table has this field.
+
+Other Notes:
+
+- I've included multiple configs, each favouring different
+  database families. 
+
+- You'll find a sample dataset in this directory this should
+  provide a very minimal collection of rows. For more examplar data run,
+  bootstrap.sh (warning: this will take up 3~4 gbs) 
+
+ - Client modules should be written in both coffeescript and
+   plain old javascript, edit as you like.
+
+----------------------------------------------------------

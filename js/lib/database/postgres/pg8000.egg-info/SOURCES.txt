@@ -1,0 +1,15 @@
+MANIFEST.in
+ez_setup.py
+setup.py
+pg8000/__init__.py
+pg8000/dbapi.py
+pg8000/errors.py
+pg8000/interface.py
+pg8000/protocol.py
+pg8000/types.py
+pg8000/util.py
+pg8000.egg-info/PKG-INFO
+pg8000.egg-info/SOURCES.txt
+pg8000.egg-info/dependency_links.txt
+pg8000.egg-info/top_level.txt
+pg8000.egg-info/zip-safe
