@@ -90,4 +90,4 @@ export ONELINE_BASE=$(pwd)
 cd $ONELINE_BASE/bin/
 rm -f /usr/bin/onelined
 cp ./onelined /usr/bin/
-./onelined --start
+./oneline-server --start

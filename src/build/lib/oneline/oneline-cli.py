@@ -178,13 +178,15 @@ class {0}(ol.module):
 				f = open(path_of_mod + "/" + module_name + ".html", "w+")
 				f.write("""
 <!DOCTYPE html>
+<!-- By default I run on public IP, to change, add flag: 'host' in Oneline.setup -->
+<!-- -->
 <html class="no-js" lang="en-US"> <!--<![endif]-->
     <body>
       <script type='application/javascript' src='./oneline.min.js'></script>
       <script type='application/javascript'>
-	  Oneline.setup({ server: '{0}', freq: 10 });
-	  Oneline.pipeline(agent, [], function(res) {
-	      console.log(res):
+	  Oneline.setup({ module: '{0}', host: document.location.host, freq: 10 });
+	  Oneline.pipeline({}, [], function(res) {
+	      console.log(res);
 	  }).run();
     </script>
   </body>
