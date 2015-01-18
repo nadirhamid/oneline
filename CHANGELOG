@@ -87,5 +87,6 @@ Minor:
         AND
         var echo = Oneline.echo({limit:5});
   
-     are equivalent. Procedural is "RECOMMENDED"
-- cli updates  
+     are equivalent. Procedural is recommended 
+- cli updates 
+    
