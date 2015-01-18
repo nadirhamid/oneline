@@ -178,10 +178,10 @@ from oneline import ol
 
 class {0}(ol.module):
     def start(self):
-    self.pipeline = ol.stream()
+        self.pipeline = ol.stream()
     
     def receiver(self, message):
-    self.pipeline.run(message)
+        self.pipeline.run(message)
 """.format(module_name))
                 print "Linking " + module_name + "'s module..."
                 os.system('sudo ln -s {0}/{1}.py > /dev/null 2>&1 &'.format(path_of_mod, module_name))
@@ -193,7 +193,17 @@ class {0}(ol.module):
 <!-- By default I run on public IP, to change, add flag: 'host' in Oneline.setup -->
 <!-- -->
 <html class="no-js" lang="en-US"> <!--<![endif]-->
+    <head>
+        <title>Oneline client -- demo</title>
+    </head>
     <body>
+      <h2>Hi, this is the data:</h2>
+      <div id="fill">
+      </div>
+      <br />
+      <small>
+      If this is working it should be a JSON structure
+      </small>
       <script type='application/javascript' src='./oneline.min.js'></script>
       <script type='application/javascript'>
       Oneline.setup({ 
@@ -205,7 +215,7 @@ class {0}(ol.module):
            "limit": 10
       });
       Oneline.pipeline(function(res) {
-          console.log(res);
+          document.getElementById('fill').innerHTML = JSON.stringify(res.data);
       }).run();
     </script>
   </body>
