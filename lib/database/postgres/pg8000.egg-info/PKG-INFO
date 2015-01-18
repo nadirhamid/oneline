@@ -1,6 +1,6 @@
-Metadata-Version: 1.0
+Metadata-Version: 1.1
 Name: pg8000
-Version: 1.09
+Version: 1.9
 Summary: PostgreSQL interface library
 Home-page: http://code.google.com/p/pg8000
 Author: Mariano Reingart
