@@ -184,8 +184,15 @@ class {0}(ol.module):
     <body>
       <script type='application/javascript' src='./oneline.min.js'></script>
       <script type='application/javascript'>
-	  Oneline.setup({ module: '{0}', host: document.location.host, freq: 10 });
-	  Oneline.pipeline({}, [], function(res) {
+	  Oneline.setup({ 
+            module: '{0}', 
+            host: document.location.host, 
+            freq: 10 
+      });
+      Oneline.echo({
+           "limit": 10
+      });
+	  Oneline.pipeline(function(res) {
 	      console.log(res);
 	  }).run();
     </script>

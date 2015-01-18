@@ -73,3 +73,19 @@ Minor:
       ui currently supports:
          module showcase
 - support for java based streaming. use with jar or .java files
+
+0.5.8
+-----
+- updates to Oneline client
+  adds:
+     1. object simplication
+     2. no setting objects as variables (procedural based),
+        ex:
+        Oneline.echo({
+            limit:5
+        });
+        AND
+        var echo = Oneline.echo({limit:5});
+  
+     are equivalent. Procedural is "RECOMMENDED"
+- cli updates  

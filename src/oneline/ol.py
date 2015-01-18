@@ -968,9 +968,7 @@ class pipeline(object):
         """
         check if we need to update the config
         """
-
         message = TextMessage(message.__str__())
-
         """ first check memcache """
         if not self.memcache is None:
             salt = hashlib.md5(message.__str__()).hexdigest()
@@ -1385,6 +1383,32 @@ class logger(object):
 
         os.chdir(curr)
 
+
+""" generic echo module take a db table output its contents """
+class echo(object):
+    def __init__(self):
+        self.errors = []
+    """ only one possible error: no table. """
+    def log(self):
+        name = self.__str__()
+
+        for i in self.errors:
+            self.logger.append(dict(object=name, message=i))
+
+    def run(self, message):
+        _OL_DB = self.storage.get()['db']
+        _OL_TABLE = self.storage.get()['table']
+        limit = message['packet']['echo']['limit']
+        if not 'data' in message.keys():
+            rows = _OL_DB(getattr(_OL_DB, _OL_TABLE)).select()
+            return rows.as_list() 
+        else:
+            for k in range(0, len(message['data'])):
+                message['data'][k]['confidence'] += 1
+
+            return message['data']
+
+
 """
 geolocation module:
 all lookups in this 'must'
@@ -1650,10 +1674,8 @@ class time(object):
             return message['data']                  
 
 
+""" db writing support ?"""
 class writer(object):
-    pass
-
-class echo(object):
     pass
 
 """
