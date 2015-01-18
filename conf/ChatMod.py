@@ -10,11 +10,11 @@ MyGeolocationModule.py -> MyGeolocationModule.conf
 ===========================================
 
 db_type = 'postgres'
-db_table = 'products'
-db_user = 'postgres'
-db_pass = 'qpqpqp18'
-db_database = 'my__'
-db_host = '127.0.0.1'
+db_table = '__POSTGRES_TABLE__'
+db_user = '__POSTGRES_USER__'
+db_pass = '__POSTGRES_PASS__'
+db_database = '__POSTGRES_DATABASE__'
+db_host = '__PUBLIC_OR_LOCAL_IP__'
 ol_broadcast = 'group'
 ol_freq = '0'
 ol_logging = 'verbose'
