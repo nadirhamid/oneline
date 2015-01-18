@@ -1,1 +1,6 @@
-python /usr/bin/oneline-cli.py --client $1 $2 $3 $4 $5 $6 $7 $8
+### oneline client
+### 
+## use as follows
+## oneline-client {options}
+## 
+python /usr/bin/oneline-cli.py --client "$@"

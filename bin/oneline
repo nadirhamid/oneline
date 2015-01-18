@@ -1,1 +1,5 @@
-python /usr/bin/oneline-cli.py $1 $2 $3 $4 $5 $6 $7 $8
+## oneline base
+## run as either client
+## or server
+## oneline --help
+python /usr/bin/oneline-cli.py "$@"
