@@ -965,6 +965,7 @@ class pipeline(object):
         if not cherrypy.engine.state == cherrypy.engine.states.STARTED:
             return
 
+    
         """
         check if we need to update the config
         """
@@ -1026,6 +1027,7 @@ class pipeline(object):
 
             m = bsonlib.loads(bytearray(literal).__str__())
             is_json = False
+
 
         if self._objs == '':
             self._objs = [globals()[i]() for i in m['packet'] if i in OBJS]
@@ -1705,9 +1707,29 @@ class event(object):
         _OL_DB = self.storage.get()['db']
         _OL_TABLE = self.storage.get()['table']
 
+        btype = "AND"
+        limit = 12 
+        page = 0
+
+        reserved = ['limit', 'page', 'type']
+
         for k,v in message['packet']['event'].iteritems():
-            if not k in getattr(_OL_DB, _OL_TABLE).fields:
-                self.errors.append('This table does not have: ' + k + ' field in: ' + _OL_TABLE + ' table')
+            if not k in reserved:
+              if not k in getattr(_OL_DB, _OL_TABLE).fields:
+                  self.errors.append('This table does not have: ' + k + ' field in: ' + _OL_TABLE + ' table')
+
+            ## reserveed keyword type
+            ## needs to specify what operand we're going for
+            if k == "type":
+              btype = v
+              continue
+            if k == "limit":
+              limit = int(v)
+              continue
+            if k == "page":
+              page = limit * int(page)
+              continue
+         
 
             if type(v) is list:
                 for i in v:
@@ -1720,6 +1742,7 @@ class event(object):
             for i in opts:
 
                 op = i['op']
+
 
                 if op == '==':
                     queries.append(getattr(getattr(_OL_DB, _OL_TABLE), i['key']) == i['value'])
@@ -1738,8 +1761,18 @@ class event(object):
                 else: 
                     queries.append(getattr(getattr(_OL_DB, _OL_TABLE), i['key']) == i['value'])
 
-            query = reduce(lambda a,b:(a&b),queries)
-            rows = _OL_DB(query).select()
+            if btype == 'AND':
+              query = reduce(lambda a,b:(a&b),queries)
+            else: 
+              query = reduce(lambda a,b:(a|b),queries)
+        
+            if limit != 12:
+              if page != 0:
+                rows = _OL_DB(query).select(limitby=(0, page + limit))
+              else: 
+                rows = _OL_DB(query).select(limitby=(0, limit))
+            else:
+              rows = _OL_DB(query).select(limitby=(0, limit))
 
             return rows.as_list()
 

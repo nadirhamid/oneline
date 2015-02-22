@@ -90,3 +90,14 @@ Minor:
      are equivalent. Procedural is recommended 
 - cli updates 
     
+0.5.9
+----
+- events now support pagination type and limits
+  IN client use 'limit' and 'page' accordingly
+  example:
+  Oneline.event({
+    'type': 'OR'
+    'limit': 20
+    'title': Oneline.value('like' 'Test')
+  });
+- minor fixes
