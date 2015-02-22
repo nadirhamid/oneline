@@ -672,6 +672,10 @@ class storage(object):
                 except:
                     dbfolder = "/usr/bin/"
 
+        if proto:
+          logger = cherrypy.config['/' + proto[0]]['request.module_logger']
+        else:
+          logger = None
 
         """ treat mariadb as mySQL """
         if db_type in ['mariadb']:
@@ -741,20 +745,58 @@ class storage(object):
                 elif db_type in ['postgres']:
                     schema = self.db.executesql("select column_name, data_type, character_maximum_length from INFORMATION_SCHEMA.COLUMNS where table_name = '" + i[0] + "';")
 
+                """
+                update when we don't find an id field try to find an primary_key or auto_increment 
+                and use in place. if that doesn't work throw an error
+                
+                """
+                has_id = False
+                has_auto_increment = False
                 for j in schema:
+                  if db_type in ['sqlite']:
+                    if j[1] == "id":
+                      has_id = 1
+                  else:
+                    if j[0] == "id":
+                      has_id = 1
+                kw = dict() 
+                for j in schema:
+                    print j
                     """
                     structure is as follows:
-                    {0 -> field_name, 1 -> type, 2 -> type, 3 ->, 4 -> default, 5 ->}
+                    {0 -> field_name, 1 -> type, 2 -> type, 3 ->, 4 -> default, 5 -> column auto increment}
                     for sqlite:
                     {0 -> int count, 1 -> field_name, 3 -> type }
                     """
                     if db_type in ['sqlite']:
-                        args.append(Field(j[1]))
+                        if not has_id and (j[5] == "auto_increment" or j[3] == "PRI"):
+                          args.append(Field(j[1], type='id'))
+                          has_auto_increment = 1
+                          kw['primarykey'] = [j[1]]
+                        else:
+                          args.append(Field(j[1]))
                     else:
-                        args.append(Field(j[0]))
+                        if not has_id and (j[5] == "auto_increment" or j[3] == "PRI"):
+                          args.append(Field(j[0], type='id'))
+                          kw['primarykey'] = [j[0]]
+                          has_auto_increment = 1
+                        else:
+                          args.append(Field(j[1]))
 
+                
 
-                self.db.define_table(*args)
+                if not has_id and not has_auto_increment:
+                  ## warning here!
+                  if logger:
+                    logger.append(dict(
+                      message="Could not find an auto increment key for %s. If you're using this table make sure it has one!" % (i[0]), 
+                      object=self.__str__()))
+                      
+                if len(kw.keys()) > 0:
+                  self.db.define_table(*args,**kw)
+                else:
+                  self.db.define_table(*args)
+
 
             if not table in self.db.tables:
                 raise NameError('ONELINE: This table does not exist in the database')

@@ -100,4 +100,9 @@ Minor:
     'limit': 20
     'title': Oneline.value('like' 'Test')
   });
+
+- Oneline tables all need either an auto_increment
+  or PRIMARY KEY. when not specified logger will warn
+
 - minor fixes
+

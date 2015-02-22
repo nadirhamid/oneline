@@ -672,6 +672,10 @@ class storage(object):
                 except:
                     dbfolder = "/usr/bin/"
 
+        if proto:
+          logger = cherrypy.config['/' + proto[0]]['request.module_logger']
+        else:
+          logger = None
 
         """ treat mariadb as mySQL """
         if db_type in ['mariadb']:
@@ -741,17 +745,49 @@ class storage(object):
                 elif db_type in ['postgres']:
                     schema = self.db.executesql("select column_name, data_type, character_maximum_length from INFORMATION_SCHEMA.COLUMNS where table_name = '" + i[0] + "';")
 
+                """
+                update when we don't find an id field try to find an primary_key or auto_increment 
+                and use in place. if that doesn't work throw an error
+                
+                """
+                has_id = False
+                has_auto_increment = False
+                for j in schema:
+                  if db_type in ['sqlite']:
+                    if j[1] == "id":
+                      has_id = 1
+                  else:
+                    if j[0] == "id":
+                      has_id = 1
+
                 for j in schema:
                     """
                     structure is as follows:
-                    {0 -> field_name, 1 -> type, 2 -> type, 3 ->, 4 -> default, 5 ->}
+                    {0 -> field_name, 1 -> type, 2 -> type, 3 ->, 4 -> default, 5 -> column auto increment}
                     for sqlite:
                     {0 -> int count, 1 -> field_name, 3 -> type }
                     """
                     if db_type in ['sqlite']:
-                        args.append(Field(j[1]))
+                        if not has_id and (j[3] == "auto_increment" or j[5] == "PRI"):
+                          args.append(Field(j[0]), type='id')
+                          has_auto_increment = 1
+                        else:
+                          args.append(Field(j[1]))
                     else:
-                        args.append(Field(j[0]))
+                        if not has_id and (j[3] == "auto_increment" or j[5] == "PRI"):
+                          args.append(Field(j[0]), type='id')
+                          has_auto_increment = 1
+                        else:
+                          args.append(Field(j[0]))
+
+                if not has_id and not has_auto_increment:
+                  ## warning here!
+                  if logger:
+                    logger.append(dict(
+                      message="Could not find an auto increment key for table. If you're using this table make sure it has one!" % (i[0]), 
+                      object=self.__str__()))
+                      
+                  
 
 
                 self.db.define_table(*args)
@@ -965,6 +1001,7 @@ class pipeline(object):
         if not cherrypy.engine.state == cherrypy.engine.states.STARTED:
             return
 
+    
         """
         check if we need to update the config
         """
@@ -1026,6 +1063,7 @@ class pipeline(object):
 
             m = bsonlib.loads(bytearray(literal).__str__())
             is_json = False
+
 
         if self._objs == '':
             self._objs = [globals()[i]() for i in m['packet'] if i in OBJS]
@@ -1705,9 +1743,29 @@ class event(object):
         _OL_DB = self.storage.get()['db']
         _OL_TABLE = self.storage.get()['table']
 
+        btype = "AND"
+        limit = 12 
+        page = 0
+
+        reserved = ['limit', 'page', 'type']
+
         for k,v in message['packet']['event'].iteritems():
-            if not k in getattr(_OL_DB, _OL_TABLE).fields:
-                self.errors.append('This table does not have: ' + k + ' field in: ' + _OL_TABLE + ' table')
+            if not k in reserved:
+              if not k in getattr(_OL_DB, _OL_TABLE).fields:
+                  self.errors.append('This table does not have: ' + k + ' field in: ' + _OL_TABLE + ' table')
+
+            ## reserveed keyword type
+            ## needs to specify what operand we're going for
+            if k == "type":
+              btype = v
+              continue
+            if k == "limit":
+              limit = int(v)
+              continue
+            if k == "page":
+              page = limit * int(page)
+              continue
+         
 
             if type(v) is list:
                 for i in v:
@@ -1720,6 +1778,7 @@ class event(object):
             for i in opts:
 
                 op = i['op']
+
 
                 if op == '==':
                     queries.append(getattr(getattr(_OL_DB, _OL_TABLE), i['key']) == i['value'])
@@ -1738,8 +1797,18 @@ class event(object):
                 else: 
                     queries.append(getattr(getattr(_OL_DB, _OL_TABLE), i['key']) == i['value'])
 
-            query = reduce(lambda a,b:(a&b),queries)
-            rows = _OL_DB(query).select()
+            if btype == 'AND':
+              query = reduce(lambda a,b:(a&b),queries)
+            else: 
+              query = reduce(lambda a,b:(a|b),queries)
+        
+            if limit != 12:
+              if page != 0:
+                rows = _OL_DB(query).select(limitby=(0, page + limit))
+              else: 
+                rows = _OL_DB(query).select(limitby=(0, limit))
+            else:
+              rows = _OL_DB(query).select(limitby=(0, limit))
 
             return rows.as_list()
 
