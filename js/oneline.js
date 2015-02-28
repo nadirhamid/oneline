@@ -82,7 +82,6 @@
         */
       Oneline.target = document.getElementById(Oneline.target);
 
-      console.log(Oneline.target);
   };
 
   /* agent object for oneline
@@ -220,7 +219,7 @@
     Oneline.generic.options = options;
     if (!ready)
       Oneline.objects.push(
-          clone(Oneline.generic(options, 1));
+          clone(Oneline.generic(options, 1))
       );
 
       return {
@@ -243,8 +242,12 @@
         run: function(m) 
         {
           this.m = m || {};
-          this.m.type = Oneline.generic.options.type;
-          this.m.state = 1;
+          this.m.generic = {};
+          this.m.generic.type = Oneline.generic.options.type;
+          this.m.generic.data = Oneline.generic.options.data;
+          this.state = 1;
+
+          console.log(this);
         }
       }
   };
@@ -397,6 +400,7 @@
                           m_.packet.timestamp = t; 
                           m_.packet.interop = O.interop;
                           m_.uuid = O.uuid();
+
 
                           O.socket.send(O.interop.stringify(m_));
 
