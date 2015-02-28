@@ -306,6 +306,15 @@ def scan_config(caller):
             config['stream_into'] = False 
 
 
+        """ parse any other key value values """
+        kv = re.findall("([\w_]+)\s+\=\s+\'(.*)\'", f)
+        if len(kv) > 0: 
+          ## tuples
+          for i in kv:
+            config[i[0]] = i[1]
+
+
+
     os.chdir(curr)
     return config
 
@@ -321,6 +330,23 @@ def stream(agent='', pline='', db=''):
         db = storage(caller=caller_name())
 
     return pipeline(pline, db, obj, scan_config(caller_name()))
+
+
+def parse_message(message):
+  literal = ast.literal_eval(message.__str__())
+  return bsonlib.loads(bytearray(literal).__str__())
+
+## opposite parse_message
+def pack_message(message):
+  bytes = map(ord, bsonlib.dumps(message)).__str__()
+  return bytes
+
+"""
+parse the config
+and provide a key value structure
+"""
+def config():
+  return scan_config(caller_name())
 
 class _server(object):
     def __init__(self, host, port, ssl=False):
@@ -534,7 +560,6 @@ class server(object):
         os.chdir(curr)
 
         print 'ONELINE CONFIG: ' 
-        print config
         
         cherrypy.config.update({ 'request.modules_md5_snapshot': hashlib.md5(salt).hexdigest() })
 
@@ -588,11 +613,13 @@ class storage(object):
             caller = config_name
 
         has_config = False
-        join_table = False
-        join_on = False
-        union_table = False
-        union_on = False
-        omitlist = False
+        join_table = self.join_table = False
+        join_on = self.join_on =False
+        union_table = self.union_table = False
+        union_on = self.union_on = False
+        omitlist = self.omitlist = False
+        no_table_set = False
+        
         curr = os.getcwd()
 
         print "ONELINE: " +  caller + "'s " + "config file: " + config_name
@@ -619,7 +646,13 @@ class storage(object):
                     pass
             
             try:
-                db_type = re.findall("db_type\s+\=\s+\'(.*)\'", main)[0]
+                db_type = re.findall("db_type\s+\=\s+\'(.*)\'", main)
+
+                ## priminitive check for db_type
+                if len(db_type) > 0:
+                  db_type = db_type[0]
+                else:
+                  no_table_set = 1
                 database = re.findall("db_database\s+\=\s+\'(.*)\'", main)[0]
                 username = re.findall("db_user\s+\=\s+\'(.*)\'", main)[0]
                 password = re.findall("db_pass\s+\=\s+\'(.*)\'", main)[0]
@@ -627,6 +660,15 @@ class storage(object):
             except:
                 pass
 
+
+
+            ## when a db type is not provided
+            ## we should not use the storage object
+            ## TODO:
+            ## provide a mock function  
+            if no_table_set: 
+              return None
+            
             if not has_config:
                 """
                 if we couldn't find a config file
@@ -637,7 +679,12 @@ class storage(object):
                 pass
             else:
                 try:
-                    db_type = re.findall("db_type\s+\=\s+\'(.*)\'", f)[0]
+                    db_type = re.findall("db_type\s+\=\s+\'(.*)\'", f)
+                    if len(db_type) > 0:
+                      db_type = db_type[0]
+                    else:
+                      no_table_set = True
+              
                     table = re.findall("db_table\s+\=\s+\'(.*)\'", f)[0]
                     database = re.findall("db_database\s+\=\s+\'(.*)\'", f)[0]
                     username = re.findall("db_user\s+\=\s+\'(.*)\'", f)[0]
@@ -648,6 +695,11 @@ class storage(object):
                     join_on = re.findall("db_join_on\s+\=\s+\'(.*)\'", f)[0]
                 except:
                     pass
+
+               
+
+                if no_table_set: 
+                  return 
 
                 try:
                     join_table = re.findall("db_join_table\s+\=\s+\'(.*)\'", f)[0]
@@ -761,7 +813,6 @@ class storage(object):
                       has_id = 1
                 kw = dict() 
                 for j in schema:
-                    print j
                     """
                     structure is as follows:
                     {0 -> field_name, 1 -> type, 2 -> type, 3 ->, 4 -> default, 5 -> column auto increment}
@@ -1075,6 +1126,14 @@ class pipeline(object):
             self._objs = [globals()[i]() for i in m['packet'] if i in OBJS]
 
         p = m['packet']
+        ## any existing data we need to copy
+        ## this is for when the module appends
+        ## data. we need to just return it to the client
+        d = []
+        if 'data' in m.keys():
+          d = m['data']
+        else:
+          d = []
 
         """
         if no limit is set
@@ -1292,7 +1351,16 @@ class pipeline(object):
             m = dict(data=m, status=u'ok')
         except:
             m = dict(data=[], status=u'empty')
-    
+
+        if d:
+
+          ## d just needs to by a list
+          ## with dictionaries
+          for i in d:
+            i['confidence'] = 1
+            m['data'].append(i)
+
+
         if is_json:
             bytes = json.dumps(m)
         else:

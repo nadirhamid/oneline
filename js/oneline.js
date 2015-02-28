@@ -208,6 +208,48 @@
   };
 
 
+  /**
+   * oneline generic
+   * class. These just
+   * tell oneline to not use oneline
+   * pipelining and stick to the module's
+   * code.
+   * @class
+   */
+  Oneline.generic = function(options, ready) {
+    Oneline.generic.options = options;
+    if (!ready)
+      Oneline.objects.push(
+          clone(Oneline.generic(options, 1));
+      );
+
+      return {
+
+        /**
+         * run the generic. These just provide
+         * two parameters: type
+         * that will tell what needs to be done
+         * and data:
+         * other stuff
+         *
+         * Oneline.generic({
+              'type': 'call' 
+           });
+         * Oneline.generic({
+              'type': 'do_something'
+              'data': []
+           });
+         */
+        run: function(m) 
+        {
+          this.m = m || {};
+          this.m.type = Oneline.generic.options.type;
+          this.m.state = 1;
+        }
+      }
+  };
+
+
   /* time module
    * @class
    */

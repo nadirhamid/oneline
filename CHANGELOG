@@ -106,3 +106,27 @@ Minor:
 
 - minor fixes
 
+
+0.6.0
+----
+- DB tables are now optional
+- added generic module for client
+  - works as follows:
+
+    - configure a 'type' and 'data' parameter
+    - these can then be used in Oneline modules
+    - examples:
+      Oneline.generic({
+        'type': 'do_something'
+        'data': [] // array data to do_something
+      });
+    - motivations:
+       custom module writing with no db interface.
+- added parsing functions and unparsing for BSON
+  can be called in modules
+  ol.parse_message/1 from BSON to dict
+  ol.pack_message/1 from dict to BSON
+
+- configurations can now be accessed in modules
+  ol.config/1 returns the current modules config
+  
