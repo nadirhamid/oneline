@@ -6,9 +6,6 @@
 # Email:matrix.nad@gmail.com
 ###############################################################################
 #
-# chkconfig: 2345 20 75
-# description: Oneline Server 
-#
 ### BEGIN INIT INFO
 # Provides:          oneline 
 # Short-Description: Oneline server daemon
@@ -36,15 +33,9 @@ case "$1" in
 	echo -n "Stopping oneline server:"
 	oneline-server --stop
 	;;
-  status)
-        echo -n "Status of lfd:"
-        ;;
-  restart|force-reload)
-	oneline-server --restart
-	;;
   *)
 	oneline-server --start
-	echo "Usage: /etc/init.d/onelined start|stop|restart"
+	echo "Usage: /etc/init.d/oneline start|stop|restart"
 	exit 1
 esac
 
