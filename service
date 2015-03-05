@@ -26,15 +26,15 @@ fi
 case "$1" in
   start)
 	echo -n "Starting oneline server:"
-	oneline-server --start
+	onelined --start
 	exit;
 	;;
   stop)
 	echo -n "Stopping oneline server:"
-	oneline-server --stop
+	onelined --stop
 	;;
   *)
-	oneline-server --start
+	onelined --start
 	echo "Usage: /etc/init.d/oneline start|stop|restart"
 	exit 1
 esac
