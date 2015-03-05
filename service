@@ -43,10 +43,8 @@ case "$1" in
 	oneline-server --restart
 	;;
   *)
-
-  sleep 10
 	oneline-server --start
-	echo "Usage: /etc/init.d/lfd start|stop|restart|force-reload|status"
+	echo "Usage: /etc/init.d/onelined start|stop|restart"
 	exit 1
 esac
 
