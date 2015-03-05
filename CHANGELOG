@@ -130,3 +130,9 @@ Minor:
 - configurations can now be accessed in modules
   ol.config/1 returns the current modules config
   
+
+0.6.1
+-- init.d update:
+  - init.d server caused crashes without mysql support
+    it is highly recommended to switch to 0.6.1
+   
