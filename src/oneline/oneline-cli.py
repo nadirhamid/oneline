@@ -33,6 +33,9 @@ class Runtime(object):
                 self.start = True
             if i in ['-st', '--stop']:
                 self.stop = True
+            if i in ['-p', '--pack']:
+                self.pack = True
+                self.file = j
             if i in ['init', '--init']:
                 self.init = j 
             if i in ['bundle', '--bundle']:
@@ -110,6 +113,45 @@ class Runtime(object):
         if 'status' in dir(self):
             pass
             
+
+        """
+        pack needs to get the current directory
+        take the name provided to the command 
+        and perform the needed symbolic links
+        so
+        oneline-client --pack "wikipedia-module" 
+        looks at:
+
+        wikipedia-module.html
+        wikipedia-module.py
+        wikipedia-module.conf
+        """
+        if 'pack' in dir(self):
+           print("Packing Oneline Module.. please wait")
+           cwd = os.getcwd()
+           files = [self.file + ".py", self.file + ".html", self.file + ".conf"]
+           for i in files:
+              if not os.path.isfile(os.path.abspath(i)):
+                print "Couldn\'t find: %s, exiting"  % (i)
+                return
+
+           ## now we can make 
+           ## the symbolic
+           ## links
+
+           os.chdir("/usr/local/oneline/modules/")
+           os.system("rm -rf ./" + (self.file + "*"))
+
+           print "Making Symbolic links.."
+           print "Linking: " + self.file+".py"
+           os.system("ln -s " + os.path.abspath(cwd + "/" + (self.file+".py")))
+
+           os.chdir("/usr/local/oneline/conf/")
+           print "Linking: " + self.file + ".conf"
+           os.system("ln -s " + os.path.abspath(cwd + "/" + (self.file + ".conf")))
+
+           os.chdir(cwd)
+           print "All done! you can use " + self.file + " as a Oneline module now"
 
         if 'initstream' in dir(self):
             f = open(os.path.abspath(self.initstream), "w+")
@@ -305,6 +347,8 @@ init-stream      Link a stream to the home of streams (makes it accessible via: 
 -r, --remove     Permantly delete a module  
 -l, --list       List of all available modules
 -e, --edit       Edit a module by name
+-p, --pack       Pack an existant module for use in oneline
+
 
 
 SERVER SPECIFIC
