@@ -150,3 +150,15 @@ client updates:
 
     looks for
     my_module.py, my_module.conf and my_module.html
+
+
+0.6.3
+
+- geolocation object adds bidirectional option
+when set will look for lat, lng both directions. additionally
+now looks backwards 
+so lat, lat + range and lng, lng + range
+lat, lat - range and lng, lng - range
+- Update adds 'order' option which can specify
+which order objects need to passed in
+- Patch in storage object
