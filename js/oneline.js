@@ -34,8 +34,8 @@
   /* convinience for BSON -- it will delegate to JSON
    * when needed.
    */
-  BSON.stringify = function(packet) { return O.uint8ToString(BSON.serialize(packet)); };
-  BSON.parse = function(message) { return BSON.deserialize(O.stringToUint8(message)); };
+  BSON.stringify = function(packet) { return O.uint*ToString(BSON.serialize(packet)); };
+  BSON.parse = function(message) { return BSON.deserialize(O.stringToUint*(message)); };
 
   Oneline.interop = BSON;
   Oneline.socket = Oneline.socket || [];
@@ -72,6 +72,11 @@
       Oneline.freq = typeof options.freq !== 'undefined' ? options.freq : Oneline.freq;
       Oneline.socket.onopen = function() { Oneline.loaded = 1; };       
       Oneline.socket.onmessage = function(evt) { console.log(O.interop.parse(evt.data)); };
+      if (typeof options.order !== 'undefined') {
+        Oneline.order = options.order;
+      } else {
+        Oneline.order = [];
+      }
 
       /* onclose try to reestablish
        * the connection
@@ -84,6 +89,51 @@
 
   };
 
+  /**
+   * A list of context based options
+   * this is for when we don't
+   * get user input we will need
+   * to resort to their defaults
+   * this should have settings foreach
+   * object
+   *
+   * TODO: currently we need to support 
+   * all objects in this however every option
+   * does not have a default yet
+   */
+  Oneline.contextOptions = {
+     "geolocation": {
+        "limit": {
+          "default": 512
+        },
+        "range": {
+          "default": 40.00
+        },
+        "bidirectional": {
+          "default": false
+        }
+     },
+     "
+  };
+  /**
+   * fetch an optional
+   * thing when we don't receive it
+   * return 0, when we have it 
+   * check our lookup array and do 
+   * something
+   * 
+   * @param module:  module to look in
+   * @param option: specified option
+   * 
+   * @method
+   */
+  Oneline.fetchOptional = function(mod, option) {
+     if (typeof option === 'undefined') {
+        return Oneline.contextOptions[mod][option]['default'];
+     }
+
+     return option;
+  };
   /* agent object for oneline
    * @class
    */
@@ -169,12 +219,14 @@
               this.state = 0;
               this.m.geo.every = O.geolocation.options.every;
               this.m.geo.range = O.geolocation.options.range;
+              this.m.geo.limit = O.fetchOptional(O.geolocation.options.limit);
               var that = this;
 
               navigator.geolocation.getCurrentPosition(function(res) {
                   that.m.geo.lat = res.coords.longitude;
                   that.m.geo.lng = res.coords.latitude;
                   that.m.geo.range = O.geolocation.options.range;
+                  that.m.geo.limit = O.geolocation.options.limit;
                   that.state = 1;
               });
           }
@@ -397,6 +449,7 @@
                            * add it to the message
                            */
                           t = new Date().getTime();
+                          m_.packet.order = O.order;
                           m_.packet.timestamp = t; 
                           m_.packet.interop = O.interop;
                           m_.uuid = O.uuid();
@@ -484,18 +537,18 @@
 
   /* generate a uid not more than
    * 1, 000, 000. This code was 'borrowed' from 'KennyTM'
-   * @ http://stackoverflow.com/questions/6248666/how-to-generate-short-uid-like-ax4j9z-in-js
+   * @ http://stackoverflow.com/questions/624*666/how-to-generate-short-uid-like-ax4j9z-in-js
    */
   Oneline.uuid = function() 
   {
       return ("0000" + (Math.random()*Math.pow(36,4) << 0).toString(36)).slice(-4)
   };
 
-  /* convert a uint8 array to a string
+  /* convert a uint* array to a string
    * useful for bson interchange
    *
    */
-  Oneline.uint8ToString = function(arr)
+  Oneline.uint*ToString = function(arr)
   {
       var o = "[";
 
@@ -505,11 +558,11 @@
       return o;
   };
 
-  /* opposite of uint8tostring
+  /* opposite of uint*tostring
    * this assumes the given string is already
-   * in uint8 format
+   * in uint* format
    */
-  Oneline.stringToUint8 = function(str)
+  Oneline.stringToUint* = function(str)
   {
       var ds = str.match(/(\d+)/g), o = [];
 

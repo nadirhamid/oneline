@@ -593,7 +593,10 @@ class storage(object):
                  database='', 
                  port='',
                  caller='',
-                 conf=''):
+                 conf='',
+                 silent=False,
+                 custom=False
+                ):
         global _OL_DB
         global _OL_TABLE
         import ol
@@ -619,6 +622,7 @@ class storage(object):
         union_on = self.union_on = False
         omitlist = self.omitlist = False
         no_table_set = False
+        proto = False
         
         curr = os.getcwd()
 
@@ -626,13 +630,24 @@ class storage(object):
 
         if table == '':
             try:
-                if os.path.exists('/usr/local/oneline/conf'):
-                    os.chdir('/usr/local/oneline/conf')
-                    prefix = '/usr/local/oneline/conf'
 
-                    if os.path.isfile(os.path.realpath(config_name)):
-                        has_config = True
-                        f = open(os.path.realpath(config_name), 'r+').read()
+                """
+                for custom loads use the current directory
+                """
+                if custom: 
+                  file = os.path.abspath(curr) + "/" + conf
+                  if os.path.isfile(file):
+                    f = open(file, "r+").read()
+                    has_config = True
+          
+                else:
+                  if os.path.exists('/usr/local/oneline/conf'):
+                      os.chdir('/usr/local/oneline/conf')
+                      prefix = '/usr/local/oneline/conf'
+
+                      if os.path.isfile(os.path.realpath(config_name)):
+                          has_config = True
+                          f = open(os.path.realpath(config_name), 'r+').read()
 
             except:
                 pass
@@ -748,11 +763,27 @@ class storage(object):
             if db_type == 'sqlite':
                 _OL_DB = self.db = DAL('sqlite://' + database + '.db', migrate_enabled=False, folder=dbfolder, auto_import=True)    
             else:   
-                _OL_DB = self.db = DAL(db_type + '://' + username + ':' + password + '@' + host + '/' + database, pool_size=1, migrate_enabled=False)
+                if silent:
+                  _OL_DB = self.db = DAL(db_type + '://' + username + ':' + password + '@' + host + '/' + database, pool_size=1)
+                else:
+                  _OL_DB = self.db = DAL(db_type + '://' + username + ':' + password + '@' + host + '/' + database, pool_size=1, migrate_enabled=False)
+
 
         _OL_TABLE = table
 
         print "ONELINE: connected to " + db_type
+
+        """
+        when silent mode is on do not further check
+        """
+      
+        self.table = table
+        if silent:
+          ## return our current
+          ## instance
+          ##
+          return None
+      
         
 
         """
@@ -832,7 +863,7 @@ class storage(object):
                           kw['primarykey'] = [j[0]]
                           has_auto_increment = 1
                         else:
-                          args.append(Field(j[1]))
+                          args.append(Field(j[0]))
 
                 
 
@@ -1121,9 +1152,17 @@ class pipeline(object):
             m = bsonlib.loads(bytearray(literal).__str__())
             is_json = False
 
+        order = m['order']
+        p = m['packet']
 
         if self._objs == '':
-            self._objs = [globals()[i]() for i in m['packet'] if i in OBJS]
+            if len(order) > 0:
+              self._objs = []
+              for i in order:
+                if i in p and i in OBJS:
+                  self._objs.append(globals()[i]())
+            else:
+              self._objs = [globals()[i]() for i in m['packet'] if i in OBJS]
 
         p = m['packet']
         ## any existing data we need to copy
@@ -1203,7 +1242,7 @@ class pipeline(object):
             we must filter this to only the needed
             amount of node:ws
             """
-            if type(m) is list:
+            if isinstance(m, list):
                 m = self._filter(m)
 
         except:
@@ -1216,7 +1255,7 @@ class pipeline(object):
         if it isnt use "table_name"_id for 
         match
         """
-        if self.storage.join_table and type(m) is list:
+        if self.storage.join_table and isinstance(m, list):
             _OL_DB = self.storage.get()['db']
             _OL_TABLE = self.storage.get()['table']
             _OL_JOIN_TABLE = self.storage.join_table
@@ -1519,8 +1558,6 @@ class echo(object):
                 message['data'][k]['confidence'] += 1
 
             return message['data']
-
-
 """
 geolocation module:
 all lookups in this 'must'
@@ -1532,6 +1569,7 @@ class geolocation(object):
     def __init__(self, every=5000):
         self.every = every
         self.range = 10
+        self.limit = 100 
         self.last = 0
         self.errors = []
 
@@ -1542,15 +1580,32 @@ class geolocation(object):
             self.logger.append(dict(object=name, message=i))
 
     def run(self, message):
-
         lat = float(message['packet']['geo']['lat'])
         lng = float(message['packet']['geo']['lng'])
-        range_ = message['packet']['geo']['range']
+        range_ = float(message['packet']['geo']['range'])
+        if 'limit' in message['packet']['geo'].keys():
+          self.limit = message['packet']['geo']['limit']
+
+        
         _OL_DB = self.storage.get()['db']
         _OL_TABLE = self.storage.get()['table']
 
-        lat_ = float(lat) + float(range_)
-        lng_ = float(lng) + float(range_)
+        """
+        need to ensure the plus
+        is always more
+        and minus is always lower
+        """
+        lat_plus = float(lat) + float(range_)
+        lng_plus = float(lng) + float(range_)
+        """
+        add a minus range
+          
+        make sure it matches
+        a minus
+        where -50 20 = -70
+        """
+        lat_minus = float(lat) + -(range_)
+        lng_minus = float(lng) + -(range_)
     
         """
         set attributes to a double type
@@ -1563,12 +1618,26 @@ class geolocation(object):
 
         if getattr(getattr(getattr(_OL_DB, _OL_TABLE), 'lng'), 'type') != 'double':
             setattr(getattr(getattr(_OL_DB, _OL_TABLE), 'lng'), 'type', 'double')
-
         """
         remember to add its confidence
         level to the packed 
         message, which is 1 to start
         """
+        ## add limit based
+        ## checkling usually
+        ## we can get around
+        ## with a decwnt
+        ## size in using the geo 
+        ## set however
+        ## we need the best
+        ## matches and subsequent
+        ##
+        ## objnects nmay need to use its results
+        ## so a limit >= 1000 <= 5000 is good
+        ## TODO:
+        ## 
+        ## seek to test
+        ##
 
         if not 'lat' in getattr(_OL_DB, _OL_TABLE).fields:
             self.errors.append('This table does have a latitude column')
@@ -1579,32 +1648,134 @@ class geolocation(object):
             raise NameError('ONELINE: This table does have a longitude column')
 
         if not 'data' in message.keys():
-            queries = []
+            q1 = []
+            q2 = []
+            q3 = []
+            q4 = []
+         
 
-            queries.append(getattr(getattr(_OL_DB, _OL_TABLE), 'lat') >= lat)
-            queries.append(getattr(getattr(_OL_DB, _OL_TABLE), 'lat') <= lat_)
-            queries.append(getattr(getattr(_OL_DB, _OL_TABLE), 'lng') >= lng)
-            queries.append(getattr(getattr(_OL_DB, _OL_TABLE), 'lng') <= lng_)
+            ##  
+            ##
+            ## forward
+            ##
+            q1.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") >= lat) 
+            q1.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") <= lat_plus) 
+            q1.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") >= lng)
+            q1.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") <= lng_plus)
 
-            query = reduce(lambda a,b:(a&b),queries)
-            rows = _OL_DB(query).select()
 
+            ## northeast
+            ##
+            q2.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") >= lat) 
+            q2.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") <= lat_plus)
+            q2.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") <= lng)
+            q2.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") >= lng_minus)
+
+            ##
+            ##
+            ##
+            q3.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") >= lat) 
+            q3.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") <= lat_plus)
+            q3.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") <= lng)
+            q3.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") >= lng_minus)
+
+            q4.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") <= lat)
+            q4.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") >= lat_minus)
+            q4.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") >= lng)
+            q4.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") <= lng_plus) 
+
+
+            ## when lat is less than
+            ## 0 we need to minus otherwise plus
+            ## 
+            ## lat <= -113 and lat >= -120
+            ## or
+            ##
+              
+             
+
+            ## also needs the
+            ## range spec
+            queriesf = []
+            testings = [dict(
+              minlat=lat,
+              maxlat=lat_plus,
+              minlng=lng,
+              maxlng=lng_plus,
+              operand1='>=',
+              operand2='<='
+            ),
+            dict(
+              minlat=lat,
+              maxlat=lat_plus,
+              minlng=lng,
+              maxlng=lng_minus,
+              operand1='>=',
+              operand2='<='
+      
+            ),
+            dict(
+              minlat=lat,
+              maxlat=lat_minus,
+              minlng=lng,
+              maxlng=lng_plus,
+              operand1='<=',
+              operand2='>='
+            )
+            ]
+            print testings
+            for i in testings:
+               print i
+               print "minlat: {0}, maxlat: {1},  minlng: {2}, maxlng: {3}\n operands: {4}, {5}".format(i['minlat'], i['maxlat'], i['minlng'],i['maxlng'], i['operand1'], i['operand2'])
+            
+          
+            q1f = reduce(lambda a,b:(a&b), q1)
+            q2f = reduce(lambda a,b:(a&b), q2)
+            q3f = reduce(lambda a,b:(a&b), q3)
+            queriesf.append(q1f)
+            queriesf.append(q2f)
+            queriesf.append(q3f)
+            finalQuery = reduce(lambda a,b:(a|b), queriesf)
+            print "limit is:"
+            print self.limit
+
+            
+            rows = _OL_DB(finalQuery).select(limitby=(0,12))
             return rows.as_list()
 
         else:
             for k in range(0, len(message['data'])):
-                if float(message['data'][k]['lat']) >= lat and \
-                   float(message['data'][k]['lat']) <= lat_ and \
-                   float(message['data'][k]['lng']) >= lng and \
-                   float(message['data'][k]['lng']) <= lng_:
-                    if not 'confidence' in message['data'][k].keys():
-                        message['data'][k]['confidence'] = 1
-                    else:
-                        message['data'][k]['confidence'] += 1
-                else:
-                        message['data'][k]['confidence'] = 0
+              """
+              needs birectional checks
+              """
+              expr1 = bool((float(message['data'][k]['lat']) >= lat) and \
+                    (float(message['data'][k]['lat']) <= lat_plus) and \
+                    (float(message['data'][k]['lng']) >= lng) and \
+                    (float(message['data'][k]['lng']) <= lng_plus)) 
+              expr2 = bool((float(message['data'][k]['lat']) >= lat) and \
+                      (float(message['data'][k]['lat']) <= lat_minus) and \
+                      (float(message['data'][k]['lng']) >= lng) and \
+                      (float(message['data'][k]['lng']) <= lng_minus))
+              expr3 = bool((float(message['data'][k]['lat']) >= lat) and \
+                      (float(message['data'][k]['lng']) <= lat_plus)
+                      (float(message['data'][k]['lng']) <= lng) and \
+                      (float(message['data'][k]['lng']) >= lng_minus))
+              expr4 = bool((float(message['data'][k]['lat']) <= lat) and \
+                      (float(message['data'][k]['lat']) >= lat_minus) and \
+                      (float(message['data'][k]['lng']) >= lng) and \
+                      (float(message['data'][k]['lng']) <= lng_plus))
+              
+              if expr1 or expr2 or expr3 or expr4:
+                  if not 'confidence' in message['data'][k].keys():
+                      message['data'][k]['confidence'] = 1
+                  else:
+                      message['data'][k]['confidence'] += 1
+              else:
+                      message['data'][k]['confidence'] = 0
 
             return message['data']                  
+
+
 
 """
 sound object must satisfy the following
