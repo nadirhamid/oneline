@@ -348,6 +348,8 @@ usage: oneline [options] required_input required_input2
 options:
 -c, --client     Run a command as a client
 -s, --server     Initiate a server
+-v, --version    Get the verison of Oneline
+
 
 CLIENT SPECIFIC
 init, --init     Create a new module
