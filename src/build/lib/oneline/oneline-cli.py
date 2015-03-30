@@ -339,7 +339,8 @@ class {0}(ol.module):
 
 
     def get_version_string(self):
-        return "v0.6.4"         
+        import pkg_resources
+        return pkg_resources.get_distribution("oneline").version
 
     def _help(self):
         print """

@@ -88,6 +88,10 @@ logs_path = os.path.abspath('../logs/')
 etc_path = os.path.abspath('../etc/')
 js_path = os.path.abspath('../js/')
 os.chdir(fpath)
+
+## remove any older
+## version
+os.system("rm -rf "  + fpath +"/oneline*.py")
 os.system('sudo ln -s ' + path + "/oneline/ol.py > /dev/null 2>&1 &")
 os.system('sudo ln -s ' + path + "/oneline/dal.py > /dev/null 2>&1 &")
 os.system('sudo ln -s ' + path + "/oneline/odict.py > /dev/null 2>&1 &")
@@ -98,8 +102,8 @@ os.system('sudo ln -s ' + bin_path + "/oneline.pid.txt > /dev/null 2>&1 &")
 os.system('sudo ln -s ' + bin_path + "/onelined > /dev/null 2>&1 &")
 os.system('sudo ln -s ' + bin_path + "/oneline-client > /dev/null 2>&1 &")
 os.system('sudo ln -s ' + bin_path + "/oneline-server > /dev/null 2>&1 &")
-
 """ link the modules and configs """
+
 os.system('mkdir ' + lpath + "oneline/")
 os.chdir(lpath + "oneline/")
 os.system("rm -rf " + lpath + "oneline/*")
