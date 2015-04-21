@@ -102,6 +102,7 @@ os.system('sudo ln -s ' + bin_path + "/oneline.pid.txt > /dev/null 2>&1 &")
 os.system('sudo ln -s ' + bin_path + "/onelined > /dev/null 2>&1 &")
 os.system('sudo ln -s ' + bin_path + "/oneline-client > /dev/null 2>&1 &")
 os.system('sudo ln -s ' + bin_path + "/oneline-server > /dev/null 2>&1 &")
+os.system('sudo ln -s '  + bin_path + "/oneline-forward > /dev/null 2>&1 &")
 """ link the modules and configs """
 
 os.system('mkdir ' + lpath + "oneline/")

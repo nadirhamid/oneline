@@ -91,3 +91,5 @@ cd $ONELINE_BASE/bin/
 rm -f /usr/bin/onelined
 cp ./onelined /usr/bin/
 ./oneline-server --start
+
+echo "Remember to run oneline-forward if you plan on using XHR to WebSocket fallback"

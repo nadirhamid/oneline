@@ -12,9 +12,9 @@
      </form>
       <script type='application/javascript'>
 
-          O.setup({ server: 'GeoMod', freq: 10 });
+          O.setup({ host: document.location.host, server: 'GeoMod', freq: 10 });
 
-          var agent = O.agent({ name: 'Jack Danny' });
+          var agent = O.agent({ server: document.location.host, name: 'Jack Danny' });
           var geo = O.geo({ range: 50.030303 });
           
 

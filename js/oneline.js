@@ -34,7 +34,7 @@
   /* convinience for BSON -- it will delegate to JSON
    * when needed.
    */
-  BSON.stringify = function(packet) { return O.uint*ToString(BSON.serialize(packet)); };
+  BSON.stringify = function(packet) { return O.uint8ToString(BSON.serialize(packet)); };
   BSON.parse = function(message) { return BSON.deserialize(O.stringToUint*(message)); };
 
   Oneline.interop = BSON;
@@ -67,7 +67,20 @@
       else
         Oneline.settings.server = options.server = 'ws://' + Oneline.host + ':' + Oneline.port + '/' + options.server;
 
-      Oneline.socket = window.WebSocket ? new window.WebSocket(options.server) : MozWebSocket(options.server); 
+      if (OnelineTransport.WebSockets.detect()) {
+      Oneline.socket = OnelineTransport.WebSockets.Ctor(options.server);
+      } else {
+      //  fallback
+      // to xhr
+        if (OnelineTransport.XHR.detect()) {
+          Oneline.settings.xhrurl = options.host + ":" + (Oneline.port + 1);
+          Oneline.socket = OnelineTransport.XHR.Ctor(Oneline.settings.xhrurl, Oneline.settings.server);
+          Oneline.loaded = true;
+        } else {
+          // todo other transportation
+          console.log("Neither XHR or WebSocket transport is available in this browser");
+        }
+      }
       Oneline.interop = typeof options.interop !== 'undefined' ? options.interop === 'json' ? JSON : BSON : BSON;
       Oneline.freq = typeof options.freq !== 'undefined' ? options.freq : Oneline.freq;
       Oneline.socket.onopen = function() { Oneline.loaded = 1; };       
@@ -112,8 +125,7 @@
         "bidirectional": {
           "default": false
         }
-     },
-     "
+     }
   };
   /**
    * fetch an optional
@@ -376,7 +388,6 @@
           if (typeof Oneline.target !== 'undefined' && Oneline.target.tagName)
                 Oneline.target['on' + Oneline.on] = 
                    function() { return Oneline.pipeline(agent, O.objects, O.callback).run(); }
-
       return {
 
           /* stop the oneline streaming
@@ -548,7 +559,7 @@
    * useful for bson interchange
    *
    */
-  Oneline.uint*ToString = function(arr)
+  Oneline.uint8ToString = function(arr)
   {
       var o = "[";
 
@@ -562,7 +573,7 @@
    * this assumes the given string is already
    * in uint* format
    */
-  Oneline.stringToUint* = function(str)
+  Oneline.stringToUint8 = function(str)
   {
       var ds = str.match(/(\d+)/g), o = [];
 

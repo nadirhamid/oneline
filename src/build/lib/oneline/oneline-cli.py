@@ -46,6 +46,8 @@ class Runtime(object):
                 self.info = j
             if i in ['-p', '--port']:
                 self.port = j
+            if i in ['--f', '--forwarder']:
+                self.forward = True
             if i in ['-i', '--ip']:
                 self.ip = j
             if i in ['settings']:
@@ -312,6 +314,10 @@ class {0}(ol.module):
             if 'version' in dir(self):
                 print "You are running Oneline v " + self.get_version_string()
 
+
+        if 'forward' in dir(self):
+          from oneline import forwarder
+
         if self.type == 'SERVER':
             if 'start' in dir(self):
                 """ start as daemon or regular? """
@@ -348,6 +354,8 @@ usage: oneline [options] required_input required_input2
 options:
 -c, --client     Run a command as a client
 -s, --server     Initiate a server
+-v, --version    Get the verison of Oneline
+
 
 CLIENT SPECIFIC
 init, --init     Create a new module

@@ -162,3 +162,17 @@ lat, lat - range and lng, lng - range
 - Update adds 'order' option which can specify
 which order objects need to passed in
 - Patch in storage object
+
+
+0.7.0
+
+- OnelineTransport class defines new ways to access oneline
+without having websocket support in the target browser
+
+  * currently supported
+  OnelineTransport.XHR  
+   native XMLHttpRequest in place of WebSockets
+  OnelineTransport.WebSockets
+   normal websocket transport (default)
+
+ definitions in transport.js

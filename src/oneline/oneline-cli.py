@@ -46,6 +46,8 @@ class Runtime(object):
                 self.info = j
             if i in ['-p', '--port']:
                 self.port = j
+            if i in ['--f', '--forward']:
+                self.forward = True
             if i in ['-i', '--ip']:
                 self.ip = j
             if i in ['settings']:
@@ -311,6 +313,10 @@ class {0}(ol.module):
             
             if 'version' in dir(self):
                 print "You are running Oneline v " + self.get_version_string()
+
+
+        if 'forward' in dir(self):
+          from oneline import forward
 
         if self.type == 'SERVER':
             if 'start' in dir(self):

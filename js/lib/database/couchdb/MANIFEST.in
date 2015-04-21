@@ -1,5 +1,0 @@
-include COPYING
-include Makefile
-include ChangeLog.rst
-include doc/conf.py
-include doc/*.rst
