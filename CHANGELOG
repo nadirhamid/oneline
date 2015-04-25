@@ -176,3 +176,5 @@ without having websocket support in the target browser
    normal websocket transport (default)
 
  definitions in transport.js
+ ** update 04/24/15
+ XHRTransport fallback on by default

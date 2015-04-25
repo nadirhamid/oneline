@@ -90,9 +90,10 @@ class Forwarder(object):
     """
     reply = ws.get_reply()
     return reply
-    
-cherrypy.config.update({
-  "server.socket_host": "0.0.0.0",
-  "server.socket_port": 9091 
-})
-cherrypy.quickstart(Forwarder())
+
+def start_forwarder(ip, port):    
+  cherrypy.config.update({
+    "server.socket_host": ip,
+    "server.socket_port":  port 
+  })
+  cherrypy.quickstart(Forwarder())

@@ -43,7 +43,7 @@ class buildsetup(build_py):
  
 
 setup(name="oneline",
-      version="0.6.4",
+      version="0.7.0",
       description="",
       maintainer="Nadir Hamid",
       maintainer_email="matrix.nad@gmail.com",

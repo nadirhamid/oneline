@@ -48,6 +48,10 @@ class Runtime(object):
                 self.port = j
             if i in ['--f', '--forward']:
                 self.forward = True
+            if i in ['--start_server']:
+                self.start_server = True
+            if i in ['--start_forwarder']:
+                self.start_forward = True
             if i in ['-i', '--ip']:
                 self.ip = j
             if i in ['settings']:
@@ -321,7 +325,20 @@ class {0}(ol.module):
         if self.type == 'SERVER':
             if 'start' in dir(self):
                 """ start as daemon or regular? """
-                ol.server(self.ip,int(self.port)).start()
+                os.system("oneline-server --start_server > /dev/null 2>&1 &")
+                os.system("oneline-server --start_forwarder > /dev/null 2>&1 &")
+                #ol.server(self.ip,int(self.port)).start()
+                """ start the forwarder as well """
+                #from oneline import forward
+                #start_forwarder(self.ip, (self.port + 1))
+            if 'start_server' in dir(self):
+                print "Starting oneline-websockets on port, ip: " + str(self.port) + ", " + self.ip
+                ol.server(self.ip, int(self.port)).start()
+            if 'start_forward' in dir(self): 
+                print "Starting oneline-xhr forwarder on port, ip: " + str(self.port+1) + ", " + self.ip
+                from oneline import forward
+                forward.start_forwarder(self.ip, (self.port+1))
+
             if 'stop' in dir(self):
                 os.system("pkill -f 'python /usr/bin/oneline-cli.py'")
             if 'restart' in dir(self):

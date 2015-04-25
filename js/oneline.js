@@ -68,12 +68,12 @@
         Oneline.settings.server = options.server = 'ws://' + Oneline.host + ':' + Oneline.port + '/' + options.server;
 
       if (OnelineTransport.WebSockets.detect()) {
-      Oneline.socket = OnelineTransport.WebSockets.Ctor(options.server);
+      Oneline.socket = OnelineTransport.WebSockets.Ctor(Oneline.settings.server);
       } else {
       //  fallback
       // to xhr
         if (OnelineTransport.XHR.detect()) {
-          Oneline.settings.xhrurl = options.host + ":" + (Oneline.port + 1);
+          Oneline.settings.xhrurl = "http://" + Oneline.host + ":" + ((parseInt(Oneline.port) + 1)).toString();
           Oneline.socket = OnelineTransport.XHR.Ctor(Oneline.settings.xhrurl, Oneline.settings.server);
           Oneline.loaded = true;
         } else {

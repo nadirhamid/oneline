@@ -29,7 +29,7 @@
      return window.WebSocket? new window.WebSocket(settings) : new window.MozWebSocket(settings);
   };
   OnelineTransport.WebSockets.detect = function() {
-    if (window.Websocket) {
+    if (window.WebSocket) {
       return true;
     }
     // when we have
@@ -45,7 +45,12 @@
 
 
   OnelineTransport.XHR =  {};
+  OnelineTransport.XHR.key = null;
   OnelineTransport.XHR.Ctor = function(xhrurl, modurl) {
+    // a key used to maintain our session
+    if (!OnelineTransport.XHR.key) {
+      OnelineTransport.XHR.key = Oneline.uuid();
+    }
     return OnelineTransport.XHR.reform(xhrurl, modurl);
   };
   OnelineTransport.XHR.opened = false;
@@ -69,9 +74,10 @@
   OnelineTransport.XHR.close = function() {
       // stub
   };
+
   OnelineTransport.XHR.send = function(msg) {
     if (!Oneline.socket.loaded) {
-        Oneline.socket = OnelineTransport.XHR.reform(Oneline.socket.url);
+        Oneline.socket = OnelineTransport.XHR.reform(Oneline.settings.xhrurl, Oneline.settings.server);
         Oneline.loaded = false;
     }
     if (!OnelineTransport.XHR.opened) {
@@ -90,7 +96,7 @@
     };
     // add our data
     // 
-    OnelineTransport.XHR.dataPost += "&data=" + msg;
+    OnelineTransport.XHR.dataPost += "&data=" + msg + "&key=" + OnelineTransport.XHR.key;
     
     Oneline.socket.sendProto(OnelineTransport.XHR.dataPost);
   };
