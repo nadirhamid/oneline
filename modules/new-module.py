@@ -1,1 +1,0 @@
-/var/www/dev/oneline-test/new-module.py
