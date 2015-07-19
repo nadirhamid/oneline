@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-
+# -*- coding: utf-8 -*- 
 import argparse
 import json
 import bsonlib
@@ -41,7 +40,9 @@ _OL_SERVER = {}
 _OL_DB = []
 _OL_DBS = []
 _OL_AGENT = {}
-_OL_TABLE = ''
+_OL_TABLE = '' ## the used table
+OL_TABLE_REAL = '' ## real  table object
+_OL_TABLES = [] ## tables used in application
 
 """
 shorthand for operator logic. Thanks to
@@ -332,14 +333,70 @@ def stream(agent='', pline='', db=''):
     return pipeline(pline, db, obj, scan_config(caller_name()))
 
 
+
+
+## deprecated in 0.7.5
 def parse_message(message):
   literal = ast.literal_eval(message.__str__())
   return bsonlib.loads(bytearray(literal).__str__())
 
 ## opposite parse_message
+## deprecated in 0.7.5
 def pack_message(message):
   bytes = map(ord, bsonlib.dumps(message)).__str__()
   return bytes
+
+def parse(message):
+  pm =  parse_message(message)
+  return pm['packet']
+
+def pack(messagePacket):
+  message = dict()
+  message['packet'] = messagePacket 
+  return pack_message(message)
+
+
+class Controller(object):
+  
+  def start(sql='',runserver=False, name=''):
+    from oneline import cli
+    config = scan_config()   
+    db = storage()
+    contents =open(sql,'r+').read()
+    db.executesql(contents)
+    cli.runserver()
+  def stop(stopserver=True):
+    from oneline import cli
+    cli.stopserver()
+
+  def clean(cleansql=False):
+    config = scan_config() 
+    db = storage()
+    if cleansql:
+      realdb = db.get_db()
+      for i in db.get_tables():
+        rows = getattr(realdb, i).select()
+        for j in rows:
+          j.delete()
+
+  def restart():
+    from  oneline import cli
+    ol.restartserver()
+    
+    
+    
+        
+      
+
+      
+  
+
+    
+
+
+     
+    
+
 
 """
 parse the config
@@ -583,6 +640,7 @@ with the database
 class storage(object):
     global _OL_DB 
     global _OL_TABLE
+    global _OL_TABLES
 
     def __init__(self, 
                  db_type='mysql', 
@@ -618,6 +676,7 @@ class storage(object):
         has_config = False
         join_table = self.join_table = False
         join_on = self.join_on =False
+        more_than_one_table = False
         union_table = self.union_table = False
         union_on = self.union_on = False
         omitlist = self.omitlist = False
@@ -672,6 +731,12 @@ class storage(object):
                 username = re.findall("db_user\s+\=\s+\'(.*)\'", main)[0]
                 password = re.findall("db_pass\s+\=\s+\'(.*)\'", main)[0]
                 table = re.findall("db_table\s+\=\s+\'(.*)\'", main)[0]
+                tables = table.split(",")
+                if len(tables)> 0:
+                  more_than_one_table = True
+                  table = tables[0]
+                  
+          
             except:
                 pass
 
@@ -701,6 +766,12 @@ class storage(object):
                       no_table_set = True
               
                     table = re.findall("db_table\s+\=\s+\'(.*)\'", f)[0]
+                 
+                    tables = table.split(",")  
+                    if len(tables)> 0:
+                      more_than_one_table = True                      
+                      table = tables[0]
+ 
                     database = re.findall("db_database\s+\=\s+\'(.*)\'", f)[0]
                     username = re.findall("db_user\s+\=\s+\'(.*)\'", f)[0]
                     password = re.findall("db_pass\s+\=\s+\'(.*)\'", f)[0]
@@ -770,6 +841,10 @@ class storage(object):
 
 
         _OL_TABLE = table
+        _OL_TABLE_REAL = getattr(_OL_DB, table)
+        if more_than_one_table:
+          for i in tables:
+            _OL_TABLES.append(getattr(_OL_DB, i))
 
         print "ONELINE: connected to " + db_type
 

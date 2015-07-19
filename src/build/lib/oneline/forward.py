@@ -51,6 +51,8 @@ class ForwardClient(WebSocketClient):
       self.close()
 
 class Forwarder(object):
+  def __init__(self):
+    self.clients = dict() 
   """ 
   receive requests by xhr and handle them
   using our websocket client
@@ -65,12 +67,18 @@ class Forwarder(object):
     mod = cherrypy.request.params['mod_url']
     ## data exposes our data
     data = cherrypy.request.params['data']
-    ws = ForwardClient(mod)
-    ws.msg = data
-    ws.ready = False
-    ws.daemon = False
-    ws.msg = mod
-    ws.connect()
+    key = cherrypy.request.params['key']
+    if key in self.clients.keys():
+      ws = self.clients[key]
+      ws.ready = False
+      ws.send(data)
+    else:
+      ws = ForwardClient(mod)
+      ws.msg = data
+      ws.ready = False
+      ws.daemon = False
+      ws.msg = mod
+      ws.connect()
 
     """
     wait for a reply

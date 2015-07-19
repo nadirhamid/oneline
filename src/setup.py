@@ -43,7 +43,7 @@ class buildsetup(build_py):
  
 
 setup(name="oneline",
-      version="0.7.0",
+      version="0.7.1",
       description="",
       maintainer="Nadir Hamid",
       maintainer_email="matrix.nad@gmail.com",
@@ -95,7 +95,7 @@ os.system("rm -rf "  + fpath +"/oneline*.py")
 os.system('sudo ln -s ' + path + "/oneline/ol.py > /dev/null 2>&1 &")
 os.system('sudo ln -s ' + path + "/oneline/dal.py > /dev/null 2>&1 &")
 os.system('sudo ln -s ' + path + "/oneline/odict.py > /dev/null 2>&1 &")
-os.system('sudo ln -s ' + path + "/oneline/oneline-cli.py > /dev/null 2>&1 &")
+os.system('sudo ln -s ' + path + "/oneline/olcli.py > /dev/null 2>&1 &")
 os.system('sudo ln -s ' + path + "/oneline/oneline-updater.py > /dev/null 2>&1 &")
 os.system('sudo ln -s ' + bin_path + "/oneline > /dev/null 2>&1 &")
 os.system('sudo ln -s ' + bin_path + "/oneline.pid.txt > /dev/null 2>&1 &")

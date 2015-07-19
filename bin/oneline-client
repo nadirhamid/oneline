@@ -3,4 +3,4 @@
 ## use as follows
 ## oneline-client {options}
 ## 
-python /usr/bin/oneline-cli.py --client "$@"
+python /usr/bin/olcli.py --client "$@"
