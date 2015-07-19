@@ -382,19 +382,23 @@ class Controller(object):
   def restart():
     from  oneline import cli
     ol.restartserver()
-    
-    
-    
-        
-      
+   
 
-      
-  
-
-    
+def db():
+  global _OL_DB 
+  return _OL_DB
 
 
-     
+def table(tablename=False):
+  global _OL_TABLE_REAL
+  global _OL_TABLES
+  if tablename: 
+    for i in _OL_TABLES:
+      if i.name ==tablename: 
+        return i
+  else:
+    return _OL_TABLE_REAL
+  return False
     
 
 
