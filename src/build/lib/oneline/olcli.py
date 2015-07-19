@@ -1,4 +1,4 @@
-import sys
+import sys 
 import os
 import shutil
 import re
@@ -325,8 +325,10 @@ ol.restart = my_oneline_restart
             if 'controller' in dir(self):
         
                 print "trying to " + self.controller
+
+                __import__("/usr/local/oneline/controllers/" + module_name + ".controller.py")
+                
                 currdir = os.getcwd()
-                import controller
                 status = getattr(ol, self.controller)()               
                 if status:
                   print "Your application has been " + self.controller
@@ -436,6 +438,17 @@ SERVER SPECIFIC
 UI SPECIFIC
 --init-ui      starts the oneline ui at the default port
 """
+
+def restartserver():
+    return Runtime(['stop'])
+
+def startserver():
+    return Runtime(['start'])
+def stop():
+    return Runtime(['stop'])
+
+
+
 
 if __name__ == '__main__':
     Runtime(sys.argv)

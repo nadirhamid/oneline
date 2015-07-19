@@ -6,7 +6,7 @@ oneline/dal.py
 oneline/forward.py
 oneline/odict.py
 oneline/ol.py
-oneline/oneline-cli.py
+oneline/olcli.py
 oneline/oneline-updater.py
 oneline/resource.py
 oneline/ui.py

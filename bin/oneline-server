@@ -3,4 +3,4 @@
 ## oneline-server {options}
 ## oneline-server --help
 ##
-python /usr/bin/oneline-cli.py --server "$@" 
+python /usr/bin/olcli.py --server "$@" 

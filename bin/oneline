@@ -2,4 +2,4 @@
 ## run as either client
 ## or server
 ## oneline --help
-python /usr/bin/oneline-cli.py "$@"
+python /usr/bin/olcli.py "$@"
