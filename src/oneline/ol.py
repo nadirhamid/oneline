@@ -740,6 +740,7 @@ class storage(object):
                  custom=False
                 ):
         global _OL_DB
+        global _OL_TABLE_REAL
         global _OL_TABLE
         import ol
 
