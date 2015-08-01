@@ -411,19 +411,23 @@ def unicodeAll(dictionaryorlist):
 
 ## deprecated in 0.7.5
 def parse_message(message):
-  literal = ast.literal_eval(message.__str__())
-  return bsonlib.loads(bytearray(literal).__str__())
+  if isinstance(message,str):
+    literal = ast.literal_eval(message.__str__())
+    return bsonlib.loads(bytearray(literal).__str__())
+  return message
 
 ## opposite parse_message
 ## deprecated in 0.7.5
 def pack_message(message):
-  if not 'order' in message.keys():
-    message['order'] = []
-  if not 'data' in message.keys():
-    message['data'] = []
+  if isinstance(message, dict):
+    if not 'order' in message.keys():
+      message['order'] = []
+    if not 'data' in message.keys():
+      message['data'] = []
 
-  bytes = map(ord, bsonlib.dumps(message)).__str__()
-  return bytes
+    bytes = map(ord, bsonlib.dumps(message)).__str__()
+    return bytes
+  return message
 
 def parse(message,module=None):
   return parse_message(message) 
@@ -736,6 +740,7 @@ class storage(object):
                  custom=False
                 ):
         global _OL_DB
+        global _OL_TABLE_REAL
         global _OL_TABLE
         import ol
 
@@ -1537,7 +1542,6 @@ class pipeline(object):
         except:
             
             m = dict(data=[], status=u'empty', response=r)
-        print m
         if d:
 
           ## d just needs to by a list

@@ -1115,6 +1115,8 @@ class module(WebSocket):
 
     def received_message(self, m):
         if 'receiver' in dir(self):
+            if isinstance(m,TextMessage):
+              m  =m.__str__()
             return self.receiver(request(parse(m)))
 
 """
