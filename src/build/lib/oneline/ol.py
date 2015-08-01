@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*- 
-import argparse
-import json
-import bsonlib
+import argparse 
+import json 
+import bsonlib 
 import operator
 import hashlib 
 import ast
@@ -334,6 +334,80 @@ def stream(agent='', pline='', db=''):
 
 
 
+class request(object):
+  def __init__(self, requestCurrent=dict()):
+    self.settings = []
+    for i in requestCurrent.keys(): 
+      self.set(i, requestCurrent[i])
+  def set(self,thing,value):
+    self.settings.append(thing)
+    setattr(self,thing,value)
+  def as_dict(self):
+    asdict = dict()
+    for i in range(0, len(self.settings)):
+      attrOfI = getattr(self,self.settings[i]) 
+      if isinstance(attrOfI, response):
+        asdict[self.settings[i]] = attrOfI.as_dict()
+      else:
+        asdict[self.settings[i]] = attrOfI
+    return unicodeAll(asdict)
+  def get(self,key):
+    if key in self.settings:
+      return getattr(self,key)
+    else:
+      if 'packet' in self.settings:
+        packet = getattr(self,'packet')
+        if key in packet.keys():
+          return packet[key]
+    return None
+    
+
+
+class response(object):
+  def __init__(self):
+    self.settings = []
+  def set(self,thing,value):
+    self.settings.append(thing)
+    setattr(self,thing,value)
+  def as_dict(self):
+    keys = dir(self)
+    newDict = dict()
+    for i in self.settings:
+      newDict[i] =getattr(self,i)
+    return unicodeAll(newDict)
+
+def unicodeAll(dictionaryorlist):
+  if isinstance(dictionaryorlist,list):
+    for i in range(0,len(dictionaryorlist)):
+      if isinstance(dictionaryorlist[i],list):
+        dictionaryorlist[i] = unicodeAll(dictionaryorlist[i])
+      if isinstance(dictionaryorlist[i], dict):
+        dictionaryorlist[i] = unicodeAll(dictionaryorlist[i])
+      if isinstance(dictionaryorlist[i], str):
+        dictionaryorlist[i] = unicode(dictionaryorlist[i])
+      if isinstance(dictionaryorlist[i], int):
+        dictionaryorlist[i] = int(dictionaryorlist[i])
+      if isinstance(dictionaryorlist[i], float):
+        dictionaryorlist[i] = float(dictionaryorlist[i])
+  if isinstance(dictionaryorlist,dict):
+      keys = dictionaryorlist.keys()
+      for i in keys:
+        if isinstance(dictionaryorlist[i], list):
+          dictionaryorlist[unicode(i)] = unicodeAll(dictionaryorlist[i])
+        if isinstance(dictionaryorlist[i], dict):
+          dictionaryorlist[unicode(i)] = unicodeAll(dictionaryorlist[i])
+        if isinstance(dictionaryorlist[i], str):
+          dictionaryorlist[unicode(i)] = unicode(dictionaryorlist[i])
+        if isinstance(dictionaryorlist[i], int):
+          dictionaryorlist[unicode(i)] = int(dictionaryorlist[i])
+        if isinstance(dictionaryorlist[i], float):
+          dictionaryorlist[unicode(i)] = float(dictionaryorlist[i])
+  return dictionaryorlist
+    
+
+    
+
+
 
 ## deprecated in 0.7.5
 def parse_message(message):
@@ -343,16 +417,18 @@ def parse_message(message):
 ## opposite parse_message
 ## deprecated in 0.7.5
 def pack_message(message):
+  if not 'order' in message.keys():
+    message['order'] = []
+  if not 'data' in message.keys():
+    message['data'] = []
+
   bytes = map(ord, bsonlib.dumps(message)).__str__()
   return bytes
 
-def parse(message):
-  pm =  parse_message(message)
-  return pm['packet']
+def parse(message,module=None):
+  return parse_message(message) 
 
-def pack(messagePacket):
-  message = dict()
-  message['packet'] = messagePacket 
+def pack(message, resp=None):
   return pack_message(message)
 
 
@@ -735,10 +811,12 @@ class storage(object):
                 username = re.findall("db_user\s+\=\s+\'(.*)\'", main)[0]
                 password = re.findall("db_pass\s+\=\s+\'(.*)\'", main)[0]
                 table = re.findall("db_table\s+\=\s+\'(.*)\'", main)[0]
-                tables = table.split(",")
-                if len(tables)> 0:
-                  more_than_one_table = True
-                  table = tables[0]
+                if re.findall(",",table):
+                    tablesInternal =table.split(",") 
+                    more_than_one_table = True
+                    table = tables[0]
+                else:
+                    tablesInternal = [table]
                   
           
             except:
@@ -770,12 +848,12 @@ class storage(object):
                       no_table_set = True
               
                     table = re.findall("db_table\s+\=\s+\'(.*)\'", f)[0]
-                 
-                    tables = table.split(",")  
-                    if len(tables)> 0:
-                      more_than_one_table = True                      
-                      table = tables[0]
- 
+                    if re.findall(",", table): 
+                      tablesInternal = table.split(",")
+                      table = tablesInternal[0]
+                    else:
+                      tablesInternal = [table]
+                     
                     database = re.findall("db_database\s+\=\s+\'(.*)\'", f)[0]
                     username = re.findall("db_user\s+\=\s+\'(.*)\'", f)[0]
                     password = re.findall("db_pass\s+\=\s+\'(.*)\'", f)[0]
@@ -843,12 +921,6 @@ class storage(object):
                 else:
                   _OL_DB = self.db = DAL(db_type + '://' + username + ':' + password + '@' + host + '/' + database, pool_size=1, migrate_enabled=False)
 
-
-        _OL_TABLE = table
-        _OL_TABLE_REAL = getattr(_OL_DB, table)
-        if more_than_one_table:
-          for i in tables:
-            _OL_TABLES.append(getattr(_OL_DB, i))
 
         print "ONELINE: connected to " + db_type
 
@@ -974,6 +1046,10 @@ class storage(object):
 
         _OL_TABLE = table
         _OL_DB = self.db
+        for i in tablesInternal:
+          _OL_TABLES.append(getattr(_OL_DB, i))
+        _OL_TABLE_REAL = getattr(_OL_DB, _OL_TABLE)
+
         self.table = table
 
         if join_table:
@@ -1034,7 +1110,7 @@ class module(WebSocket):
 
     def received_message(self, m):
         if 'receiver' in dir(self):
-            return self.receiver(m)
+            return self.receiver(request(parse(m)))
 
 """
 agent definition
@@ -1168,7 +1244,14 @@ class pipeline(object):
         if not cherrypy.engine.state == cherrypy.engine.states.STARTED:
             return
 
-    
+        if isinstance(message, str):
+          m = parse(message)
+        else:
+          if isinstance(message,request):        
+            m = message.as_dict()
+            message = pack(m)
+          
+
         """
         check if we need to update the config
         """
@@ -1216,21 +1299,6 @@ class pipeline(object):
                 _time.sleep(self.caller.freq)
                 return
 
-
-        if len(re.findall(r'interop', message.__str__())) > 0:
-            m = json.loads(message.__str__())
-            is_json = True
-
-        else:
-            literal = ast.literal_eval(message.__str__())
-
-            """
-            ensure the message fits in
-            """
-
-            m = bsonlib.loads(bytearray(literal).__str__())
-            is_json = False
-
         order = m['order']
         p = m['packet']
 
@@ -1252,6 +1320,10 @@ class pipeline(object):
           d = m['data']
         else:
           d = []
+        if 'response' in m.keys():
+          r = m['response']
+        else:
+          r = dict()
 
         """
         if no limit is set
@@ -1458,18 +1530,14 @@ class pipeline(object):
         """
 
         client = cherrypy.engine.publish('get-client', self.caller.unique).pop()
-
+        
         try:
-            for k in range(0, len(m)):
-                if isinstance(m[k], dict):
-                    for k1, v1 in m[k].iteritems():
-                        if isinstance(m[k][k1], str):
-                            m[k][k1] = unicode(m[k][k1])    
-
-            m = dict(data=m, status=u'ok')
+            data = unicodeAll(d) 
+            m = dict(data=data, status=u'ok', response=r)
         except:
-            m = dict(data=[], status=u'empty')
-
+            
+            m = dict(data=[], status=u'empty', response=r)
+        print m
         if d:
 
           ## d just needs to by a list
@@ -1479,10 +1547,7 @@ class pipeline(object):
             m['data'].append(i)
 
 
-        if is_json:
-            bytes = json.dumps(m)
-        else:
-            bytes = map(ord, bsonlib.dumps(m)).__str__()
+        bytes = map(ord, bsonlib.dumps(m)).__str__()
 
         if self.multiplex:
             if self.multiplex_current == self.multiplex_amount:

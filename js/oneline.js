@@ -35,7 +35,7 @@
    * when needed.
    */
   BSON.stringify = function(packet) { return O.uint8ToString(BSON.serialize(packet)); };
-  BSON.parse = function(message) { return BSON.deserialize(O.stringToUint*(message)); };
+  BSON.parse = function(message) { return BSON.deserialize(O.stringToUint8(message)); };
 
   Oneline.interop = BSON;
   Oneline.socket = Oneline.socket || [];

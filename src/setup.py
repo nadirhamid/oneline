@@ -43,7 +43,7 @@ class buildsetup(build_py):
  
 
 setup(name="oneline",
-      version="0.7.1",
+      version="0.8.0",
       description="",
       maintainer="Nadir Hamid",
       maintainer_email="matrix.nad@gmail.com",
@@ -113,8 +113,8 @@ os.system('sudo ln -s ' + mod_path + " > /dev/null 2>&1 &")
 os.system('sudo ln -s ' + mod_path + "/* > /dev/null 2>&1 &")
 os.system('sudo ln -s ' + conf_path + " > /dev/null 2>&1 &")
 os.system('sudo ln -s ' + conf_path + "/* > /dev/null 2>&1 &")
-os.system('sudo ln -s ' + controller_path + ' /dev/null 2>&1 &')
-os.system('sudo ln -s ' + controller_path + '/* /dev/null 2>&1 &')
+os.system('sudo ln -s ' + controller_path + ' > /dev/null 2>&1 &')
+os.system('sudo ln -s ' + controller_path + '/* > /dev/null 2>&1 &')
 os.system('sudo ln -s ' + stream_path + " > /dev/null 2>&1 &")
 os.system('sudo ln -s ' + stream_path + "/* > /dev/null 2>&1 &")
 os.system('sudo ln -s ' + logs_path + "/ > /dev/null 2>&1 &")

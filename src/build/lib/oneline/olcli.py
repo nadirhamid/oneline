@@ -240,7 +240,7 @@ class {0}(ol.module):
                 os.system('sudo ln -s {0}/{1}.py > /dev/null 2>&1 &'.format(path_of_mod, module_name))
                 f.close()
                 os.chdir(controllerpath)
-                f =  open(path_of_controller +"/" + module_name +  ".controller.py","w+")
+                f =  open(controllerpath +"/" + module_name +  ".controller.py","w+")
                 f.write("""
 ## example controller, controls your app           
 import ol
@@ -260,7 +260,7 @@ ol.restart = my_oneline_restart
                 """)
                 f.close()
                 print "Linking "  + module_name + "'s Controller" 
-                ol.system("sudo ln -s {0}/{1}.controller.py > /dev/null 2>&1 &".format(path_of_mod, module_name))
+                os.system("sudo ln -s {0}/{1}.controller.py > /dev/null 2>&1 &".format(path_of_mod, module_name))
 
                 f = open(path_of_mod + "/" + module_name + ".html", "w+")
                 f.write("""
@@ -361,8 +361,8 @@ ol.restart = my_oneline_restart
         if self.type == 'SERVER':
             if 'start' in dir(self):
                 """ start as daemon or regular? """
-                os.system("oneline-server --start_server > /dev/null 2>&1 &")
                 os.system("oneline-server --start_forwarder > /dev/null 2>&1 &")
+                os.system("oneline-server --start_server")
                 #ol.server(self.ip,int(self.port)).start()
                 """ start the forwarder as well """
                 #from oneline import forward

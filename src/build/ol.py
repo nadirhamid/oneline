@@ -419,16 +419,45 @@ def parse_message(message):
 def pack_message(message):
   if not 'order' in message.keys():
     message['order'] = []
-  if not 'data' in message.keys():
-    message['data'] = []
 
   bytes = map(ord, bsonlib.dumps(message)).__str__()
   return bytes
 
 def parse(message,module=None):
-  return parse_message(message) 
+  pm =  parse_message(message)
+   
+  return pm['packet'][module] if module else pm['packet']
 
-def pack(message, resp=None):
+def pack(messageOld, resp=None, others=dict()):
+  if not 'packet' in messageOld.keys():
+    ## build new
+    message = dict()
+    message['packet'] = dict()
+    for i in messageOld.keys():     
+      message['packet'][i]  = messageOld[i]
+ 
+    if resp:
+      if isinstance(resp, response):
+        message['response'] =resp.as_dict()
+      else:
+        message['response'] = dict()
+  else:
+    message = messageOld
+    if resp:
+      if isinstance(resp, response):
+        message['response'] = resp.as_dict()
+    else: 
+      if 'response' in message.keys():
+        if isinstance(message['response'], response):
+          message['response'] = message['response'].as_dict()
+
+  if not 'order' in  message.keys():
+    message['order'] = []
+  if not 'data' in message.keys():
+    message['data'] = []
+  for i in others.keys():
+    message['packet'][i] = others[i]
+
   return pack_message(message)
 
 
@@ -1243,15 +1272,12 @@ class pipeline(object):
 
         if not cherrypy.engine.state == cherrypy.engine.states.STARTED:
             return
+        if isinstance(message,request):
+          message = pack(message.as_dict())
 
-        if isinstance(message, str):
-          m = parse(message)
-        else:
-          if isinstance(message,request):        
-            m = message.as_dict()
-            message = pack(m)
-          
-
+        if isinstance(message, dict):
+          message = pack(message) 
+    
         """
         check if we need to update the config
         """
@@ -1298,6 +1324,21 @@ class pipeline(object):
 
                 _time.sleep(self.caller.freq)
                 return
+
+
+        if len(re.findall(r'interop', message.__str__())) > 0:
+            m = json.loads(message.__str__())
+            is_json = True
+
+        else:
+            literal = ast.literal_eval(message.__str__())
+
+            """
+            ensure the message fits in
+            """
+
+            m = bsonlib.loads(bytearray(literal).__str__())
+            is_json = False
 
         order = m['order']
         p = m['packet']
@@ -1530,13 +1571,14 @@ class pipeline(object):
         """
 
         client = cherrypy.engine.publish('get-client', self.caller.unique).pop()
-        
+
         try:
-            data = unicodeAll(d) 
+            data = unicodeAll(m) 
+
             m = dict(data=data, status=u'ok', response=r)
         except:
-            
             m = dict(data=[], status=u'empty', response=r)
+
         if d:
 
           ## d just needs to by a list
@@ -1546,7 +1588,10 @@ class pipeline(object):
             m['data'].append(i)
 
 
-        bytes = map(ord, bsonlib.dumps(m)).__str__()
+        if is_json:
+            bytes = json.dumps(m)
+        else:
+            bytes = map(ord, bsonlib.dumps(m)).__str__()
 
         if self.multiplex:
             if self.multiplex_current == self.multiplex_amount:
