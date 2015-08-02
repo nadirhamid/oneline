@@ -3,11 +3,30 @@ import os
 import shutil
 import re
 import cherrypy
+import psutil
 from oneline import ol
+import imp
+
+statusTrans = {
+    psutil.STATUS_DEAD: "Dead",
+    psutil.STATUS_ZOMBIE: "Zombie",
+    psutil.STATUS_RUNNING: "Running",
+    psutil.STATUS_SLEEPING: "Sleep",
+    psutil.STATUS_LOCKED: "Locked",
+    psutil.STATUS_TRACING_STOP: "Tracing Stop",
+    psutil.STATUS_DISK_SLEEP: "Disk Sleep",
+    psutil.STATUS_WAKING: "Waking",
+    psutil.STATUS_IDLE: "Idle",
+    psutil.STATUS_WAITING: "Waiting"
+}
+    
+
 
 class Runtime(object):
     def __init__(self, args):
+        global statusTrans
         self.args = args
+        self.status  = False
         self.type = 'SERVER'
         self.port = 9000 
         self.ip = "127.0.0.1"
@@ -18,6 +37,10 @@ class Runtime(object):
                 j = a[_i + 1]
             except:
                 j = a[_i]
+            try:
+                k = a[_i + 2]
+            except:
+                k = a[_i]
                 
             if i in ['-c', '--client']:
                 self.type = 'CLIENT'
@@ -36,7 +59,7 @@ class Runtime(object):
             if i in ['-p', '--pack']:
                 self.pack = True
                 self.file = j
-            if i in ['init', '--init']:
+            if i in ['init', '--init'] and not self.controller:
                 self.init = j 
             if i in ['bundle', '--bundle']:
                 self.bundle = j
@@ -66,6 +89,7 @@ class Runtime(object):
                 self.version = True
             if i  in ['--controller']:
                 self.controller = j
+                self.controllerAction = k
             if i in ['-e', '--edit']:
                 self.edit = j
             if i in ['--start-ui', '--init-ui', '--ui']:
@@ -83,6 +107,7 @@ class Runtime(object):
         self.perform()
 
     def perform(self):
+        global statusTrans
         if 'settings' in dir(self):
             print "Loading default settings"
             if os.path.isfile("/usr/local/oneline/conf/{0}.conf".format(self.settings)):
@@ -159,6 +184,10 @@ class Runtime(object):
            os.chdir("/usr/local/oneline/conf/")
            print "Linking: " + self.file + ".conf"
            os.system("ln -s " + os.path.abspath(cwd + "/" + (self.file + ".conf")))
+         
+           os.chdir("/usr/local/oneline/controllers/")
+           print "Linking: "  + self.file + "_controller.py"
+           os.system("ln -s " + os.path.abspath(cwd + "/" + (self.file + "_controller.py")))
 
            os.chdir(cwd)
            print "All done! you can use " + self.file + " as a Oneline module now"
@@ -240,7 +269,7 @@ class {0}(ol.module):
                 os.system('sudo ln -s {0}/{1}.py > /dev/null 2>&1 &'.format(path_of_mod, module_name))
                 f.close()
                 os.chdir(controllerpath)
-                f =  open(controllerpath +"/" + module_name +  ".controller.py","w+")
+                f =  open(controllerpath +"/" + module_name +  "_controller.py","w+")
                 f.write("""
 ## example controller, controls your app           
 import ol
@@ -260,7 +289,7 @@ ol.restart = my_oneline_restart
                 """)
                 f.close()
                 print "Linking "  + module_name + "'s Controller" 
-                os.system("sudo ln -s {0}/{1}.controller.py > /dev/null 2>&1 &".format(path_of_mod, module_name))
+                os.system("sudo ln -s {0}/{1}_controller.py > /dev/null 2>&1 &".format(path_of_mod, module_name))
 
                 f = open(path_of_mod + "/" + module_name + ".html", "w+")
                 f.write("""
@@ -323,15 +352,22 @@ ol.restart = my_oneline_restart
                 except:
                     print "One or more files could not be deleted.. please make sure the files are on path.."
             if 'controller' in dir(self):
-        
+             
                 print "trying to " + self.controller
 
-                __import__("/usr/local/oneline/controllers/" + module_name + ".controller.py")
-                
-                currdir = os.getcwd()
-                status = getattr(ol, self.controller)()               
-                if status:
-                  print "Your application has been " + self.controller
+                sys.path.append("/usr/local/oneline/controllers/")
+                module = __import__(self.controller+"_controller")
+
+                fn = getattr(module, self.controller +"_" + self.controllerAction)
+                if fn:
+                  status = fn()
+                  _OL_CURRENT_APP = self.controller
+                  if status:
+                    print self.controller + " was " + self.controllerAction + " !"
+                  else:
+                    print "Could not " + self.controllerAction
+                else:
+                  print " You have not implemented : " + self.controller + "_" + self.controllerAction
           
  
             if 'info' in dir(self):
@@ -362,28 +398,59 @@ ol.restart = my_oneline_restart
             if 'start' in dir(self):
                 """ start as daemon or regular? """
                 os.system("oneline-server --start_forwarder > /dev/null 2>&1 &")
-                os.system("oneline-server --start_server")
-                #ol.server(self.ip,int(self.port)).start()
+                #os.system("oneline-server --start_server")
+                status = ol.server(self.ip,int(self.port)).start()
+                self.status = status
                 """ start the forwarder as well """
                 #from oneline import forward
                 #start_forwarder(self.ip, (self.port + 1))
             if 'start_server' in dir(self):
                 print "Starting oneline-websockets on port, ip: " + str(self.port) + ", " + self.ip
-                ol.server(self.ip, int(self.port)).start()
+                self.status = ol.server(self.ip, int(self.port)).start()
+                 
             if 'start_forward' in dir(self): 
                 print "Starting oneline-xhr forwarder on port, ip: " + str(self.port+1) + ", " + self.ip
                 from oneline import forward
                 forward.start_forwarder(self.ip, (self.port+1))
 
             if 'stop' in dir(self):
-                os.system("pkill -f 'python /usr/bin/oneline-cli.py'")
+                
+                if os.path.isfile("/usr/local/oneline/socket/oneline.pid.txt"):
+                  processId = int(open("/usr/local/oneline/socket/oneline.pid.txt").read())
+                  process = psutil.Process(processId)
+                  process.kill()
+                  try:
+                    time.sleep(3)
+                    process = psutil.Process(processId)
+                    print "Could not stop Oneline server"
+                    print "status is " +  statusTrans[process.status()]
+                      
+                  except:
+                    print "Stopped oneline"
+                    
+                    if os.path.isfile("/usr/local/oneline/socket/oneline.forwarder.pid.txt"):
+                      processIdForwarder = int(open("/usr/local/oneline/socket/oneline.forwarder.pid.txt").read())
+                      processOfForwarder = psutil.Process(processIdForwarder)
+                      try: 
+                        time.sleep(3) 
+                        processOfForwarder = psutil.Process(processIdForwarder)
+                        print "Could not stop process for oneline-forwarder"
+                        status = statusTrans[processOfForwarder.status()]
+                        print "Status is: " + status
+                      except:
+                        print "Stopped oneline forwarder"
+                else:
+                  print "Oneline is not running.."
+    
+                ## todo  needs to check
+                ## if the server was stopped
             if 'restart' in dir(self):
                 """ TODO add graceful shutdown """
                 print "Stopping server.."
-                os.system("pkill -f 'python /usr/bin/oneline-cli.py'")
-                os.system("pkill -f '/usr/bin/python /usr/bin/oneline-cli.py'")
+                os.system("pkill -f 'python /usr/bin/olcli.py'")
+                os.system("pkill -f '/usr/bin/python /usr/bin/olcli.py'")
                 time.sleep(1)
-                ol.server().start()
+                self.status = ol.server(self.ip, int(self.port)).start()
 
                 quit()
  
@@ -391,7 +458,7 @@ ol.restart = my_oneline_restart
             if 'graceful' in dir(self):
                 print "Stopping Oneline server"
                 os.system("pkill -f 'python ./ol.py --server'")
-                os.system("pkill -f '/usr/bin/python /usr/bin/oneline-cli.py'")
+                os.system("pkill -f '/usr/bin/python /usr/bin/olcli.py'")
                 os.system("pkill -f 'python /usr/bin/ol.py --server'")
                 exit()
 
@@ -440,12 +507,16 @@ UI SPECIFIC
 """
 
 def restartserver():
-    return Runtime(['stop'])
-
+    runtime = Runtime(['--restart'])
+    return runtime.status
+    
 def startserver():
-    return Runtime(['start'])
+    runtime =Runtime(['--start_server'])
+    return runtime.status
+  
 def stop():
-    return Runtime(['stop'])
+    runtime = Runtime(['--stop'])
+    return runtime.status
 
 
 

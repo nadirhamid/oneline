@@ -43,7 +43,7 @@ _OL_AGENT = {}
 _OL_TABLE = '' ## the used table
 OL_TABLE_REAL = '' ## real  table object
 _OL_TABLES = [] ## tables used in application
-
+_OL_CURRENT_APP = "" ## used by the cli
 """
 shorthand for operator logic. Thanks to
 Amnon from StackOverflow
@@ -436,33 +436,72 @@ def pack(message, resp=None):
   return pack_message(message)
 
 
-class Controller(object):
-  
-  def start(sql='',runserver=False, name=''):
-    from oneline import cli
-    config = scan_config()   
-    db = storage()
-    contents =open(sql,'r+').read()
-    db.executesql(contents)
-    cli.runserver()
-  def stop(stopserver=True):
-    from oneline import cli
+def controller_init(sql='',startserver=False, name=''):
+  global _OL_CURRENT_APP 
+  from oneline import olcli
+  callername = caller_name()
+  fullname =re.findall(".*\.(.*)", callername)
+  if fullname: 
+    name = fullname[0]
+    caller = re.sub("_init$",  "", name)
+    db = storage(conf=caller + ".conf", silent=True).get()['db']
+    db.commit()
+    
+    contents =open(os.getcwd() + "/" + sql,'r+').read()
+    ## bug the MySQL db api needs to 
+    ## read each statement separtly to 
+    ## do this we will
+    ## commit each time
+    ##  the cursor has been executed
+    for i in contents.split(";"):  
+      query = re.sub("\n", "", i)
+      try: 
+        print "Executing " + query
+        result =db.executesql(query)
+        db.commit()
+      except:
+        if not allwhitespace(query):
+          print "Could not execute: " + query
+    
+  if startserver:
+    olcli.startserver()
+
+def allwhitespace(str):
+  for i in range(0, len(str)):
+      if not str[i] == " " or str[i] == "\n" or str[i] == "\r":
+        return False
+  return True
+ 
+
+
+def controller_stop(stopserver=True):
+  from oneline import olcli
+  if stopserer: 
     cli.stopserver()
 
-  def clean(cleansql=False):
-    config = scan_config() 
-    db = storage()
+def controller_clean(cleansql=False):
+  global _OL_CURRENT_APP
+   
+  caller= caller_name()
+  m = re.findall("\.(.*)", caller)
+  if m:
+    caller = m[0]
+    absolute =  re.sub("_clean","", caller)
+ 
+    db = storage(absolute + ".conf")
+    print "Cleaning tables for application: " + absolute
     if cleansql:
-      realdb = db.get_db()
-      for i in db.get_tables():
-        rows = getattr(realdb, i).select()
+      realdb = db.get()['db']
+      tables = db.get()['tables']
+      for i in tables:
+        rows = realdb(getattr(realdb, i)).select() 
         for j in rows:
           j.delete()
 
-  def restart():
-    from  oneline import cli
-    ol.restartserver()
-   
+def controller_restart():
+  from  oneline import olcli
+  ol.restartserver()
+ 
 
 def db():
   global _OL_DB 
@@ -705,7 +744,7 @@ class server(object):
         cherrypy.config.update({ 'request.modules_md5_snapshot': hashlib.md5(salt).hexdigest() })
 
         _OL_SERVER = _server(self.host, self.port, self.ssl)
-        cherrypy.quickstart(_OL_SERVER, '', config=config)  
+        return cherrypy.quickstart(_OL_SERVER, '', config=config)  
 
 
     def stop(self):
@@ -834,6 +873,7 @@ class storage(object):
             ## TODO:
             ## provide a mock function  
             if no_table_set: 
+              os.chdir(curr)
               return None
             
             if not has_config:
@@ -922,11 +962,12 @@ class storage(object):
                 _OL_DB = self.db = DAL('sqlite://' + database + '.db', migrate_enabled=False, folder=dbfolder, auto_import=True)    
             else:   
                 if silent:
-                  _OL_DB = self.db = DAL(db_type + '://' + username + ':' + password + '@' + host + '/' + database, pool_size=1)
+                  _OL_DB = self.db = DAL(db_type + '://' + username + ':' + password + '@' + host + '/' + database)
                 else:
-                  _OL_DB = self.db = DAL(db_type + '://' + username + ':' + password + '@' + host + '/' + database, pool_size=1, migrate_enabled=False)
+                  _OL_DB = self.db = DAL(db_type + '://' + username + ':' + password + '@' + host + '/' + database, migrate_enabled=False)
 
 
+        
         print "ONELINE: connected to " + db_type
 
         """
@@ -934,10 +975,12 @@ class storage(object):
         """
       
         self.table = table
+        self.tables = tablesInternal
         if silent:
           ## return our current
           ## instance
           ##
+          os.chdir(curr)
           return None
       
         
@@ -951,6 +994,7 @@ class storage(object):
 
             tables = self.db.executesql('SHOW TABLES; ')
 
+            self.db.commit()
         elif db_type in ['mongodb', 'couchdb']:
 
             try:
@@ -961,10 +1005,12 @@ class storage(object):
 
         elif db_type in ['sqlite']:
             tables = self.db.executesql('SELECT name FROM sqlite_master WHERE type = "table"') 
+            self.db.commit()
 
         elif db_type in ['postgres']:
 
             tables = self.db.executesql("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE';")
+            self.db.commit()
 
 
         if not db_type in ['mongodb', 'couchdb']:
@@ -977,13 +1023,13 @@ class storage(object):
 
                 if db_type in ['mysql']:
                     schema = self.db.executesql('explain ' + i[0])
-
+      
                 elif db_type in ['sqlite']:
                     schema = self.db.executesql('PRAGMA table_info({0});'.format(i[0]))
                     
                 elif db_type in ['postgres']:
                     schema = self.db.executesql("select column_name, data_type, character_maximum_length from INFORMATION_SCHEMA.COLUMNS where table_name = '" + i[0] + "';")
-
+                self.db.commit()
                 """
                 update when we don't find an id field try to find an primary_key or auto_increment 
                 and use in place. if that doesn't work throw an error
@@ -1049,6 +1095,7 @@ class storage(object):
 
             self.db.define_table(*args)
 
+        self.db.commit()
         _OL_TABLE = table
         _OL_DB = self.db
         for i in tablesInternal:
@@ -1087,7 +1134,7 @@ class storage(object):
     def get(self):
 
         self.db.commit()
-        return dict(db=self.db, table=self.table)
+        return dict(db=self.db, table=self.table, tables=self.tables)
 
     """
     set something
@@ -1115,6 +1162,8 @@ class module(WebSocket):
 
     def received_message(self, m):
         if 'receiver' in dir(self):
+            if isinstance(m,TextMessage):
+              m  =m.__str__()
             return self.receiver(request(parse(m)))
 
 """

@@ -1,0 +1,33 @@
+
+<!DOCTYPE html>
+<!-- By default I run on public IP, to change, add flag: 'host' in Oneline.setup -->
+<!-- -->
+<html class="no-js" lang="en-US"> <!--<![endif]-->
+    <head>
+        <title>Oneline client -- demo</title>
+    </head>
+    <body>
+      <h2>Hi, this is the data:</h2>
+      <div id="fill">
+      </div>
+      <br />
+      <small>
+      If this is working it should be a JSON structure
+      </small>
+      <script type='application/javascript' src='./oneline.min.js'></script>
+      <script type='application/javascript'>
+      Oneline.setup({ 
+            module: 'init', 
+            host: document.location.host, 
+            freq: 1000
+      });
+      Oneline.echo({
+           "limit": 10
+      });
+      Oneline.pipeline(function(res) {
+          document.getElementById('fill').innerHTML = JSON.stringify(res.data);
+      }).run();
+    </script>
+  </body>
+        </html>
+                

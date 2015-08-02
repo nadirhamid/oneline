@@ -104,4 +104,7 @@ def start_forwarder(ip, port):
     "server.socket_host": ip,
     "server.socket_port":  port 
   })
+  piddir = "/usr/local/oneline/socket/"
+   
+  cherrypy.process.plugins.PIDFile(cherrypy.engine, piddir + "/oneline.forwarder.pid.txt")
   cherrypy.quickstart(Forwarder())
