@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*- 
 import argparse 
-import json 
-import bsonlib 
+import json
+import bsonlib
 import operator
-import hashlib 
+import hashlib
 import ast
 import inspect
 import array
@@ -498,7 +498,7 @@ def controller_clean(cleansql=False):
           rows = realdb(getattr(realdb, i)).select() 
           for j in rows:
             j.delete()
-         return True
+        return True
 
       
 
@@ -551,6 +551,7 @@ class _server(object):
             print "ONELINE: recognized a new module however needs to be gracefully restarted"
         else:
             print 'ONELINE: request module ' + _vpath + ' was not recognized'
+
 
     def _make_new(self, name):
         setattr(self, name, proto_)

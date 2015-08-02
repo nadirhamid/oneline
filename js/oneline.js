@@ -139,8 +139,8 @@
    * 
    * @method
    */
-  Oneline.fetchOptional = function(mod, option) {
-     if (typeof option === 'undefined') {
+  Oneline.fetchOptional = function(mod, option, value) {
+     if (typeof value === 'undefined') {
         return Oneline.contextOptions[mod][option]['default'];
      }
 
@@ -231,7 +231,7 @@
               this.state = 0;
               this.m.geo.every = O.geolocation.options.every;
               this.m.geo.range = O.geolocation.options.range;
-              this.m.geo.limit = O.fetchOptional(O.geolocation.options.limit);
+              this.m.geo.limit = O.fetchOptional("geolocation", "limit", O.geolocation.options.limit);
               var that = this;
 
               navigator.geolocation.getCurrentPosition(function(res) {

@@ -1,16 +1,9 @@
-#! /usr/bin/python
+from oneline.core.module import OnelineModule
 
-##############################################################################
-# A practical test module for oneline
-# it is not intended to ran as a test and
-# should serve as an actual module
-##############################################################################
-
-from oneline import ol
-
-class GeoMod(ol.module):
-    def start(self):
-    	self.pipeline = ol.stream()
-    	
-    def receiver(self, message):
-    	self.pipeline.run(message)
+class GeoMod(OnelineModule):
+  def start(self):
+    pass
+  def receiver(self,message):
+    return self.pipeline.run(message)
+  def stop(self):
+    pass
