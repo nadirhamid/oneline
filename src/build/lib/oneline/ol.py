@@ -499,6 +499,8 @@ def controller_clean(cleansql=False):
           for j in rows:
             j.delete()
         return True
+      except:
+        raise Exception("Was not able to clean the database")
 
       
 

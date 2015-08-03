@@ -1,8 +1,8 @@
-from oneline.core.module import OnelineModule
+from oneline import ol
 
-class GeoMod(OnelineModule):
+class GeoMod(ol.module):
   def start(self):
-    pass
+    self.pipeline = ol.stream()
   def receiver(self,message):
     return self.pipeline.run(message)
   def stop(self):
