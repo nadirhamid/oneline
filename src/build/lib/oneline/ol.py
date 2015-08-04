@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*- 
-import argparse 
+# -*- coding: utf-8 -*- import argparse 
 import json
 import bsonlib
 import operator
@@ -689,60 +688,42 @@ class server(object):
             """
             ignore already compiled 
             """
-            if len(re.findall('\.pyc', i)) > 0:
+    
+            if not len(re.findall('\.py$', i)) > 0:
+                continue
+            if  len(re.findall('__init__',i)) >0:
                 continue
 
-            if not len(re.findall('\.py', i)) > 0:
-                continue
-
-            cname = re.sub('\.ol|\.py', '', i)
             salt += '_' + i
-
-            if not os.path.isfile(os.path.realpath(i)):
-                continue
-
-            os.chdir(os.path.split(os.path.realpath(i))[0]) 
-            module = __import__(cname, globals(), locals())
+           
+            module = __import__(re.sub("\.py$", "", i), globals(), locals())
+            module_name = module.__name__
 
             """
             open the file and determine its class
             """
+            setattr(_server, module_name, proto)  
+            if hasattr(module, module_name):
+              classOfModule = getattr(module, module_name)
 
-            f = open(i, 'r+').read()
+              config['/' + module_name] = { 'tools.websocket.on': True,
+                                            'request.module_md5': hashlib.md5(module_name).hexdigest(),
+                                            'request.module_ctime': os.path.getmtime(os.path.realpath("/usr/local/oneline/modules/" + i)),
+                                            'request.module_object': module,
+                                            'request.module_logger': logger(module_name),
+                                            'request.module_uuid': uuid.uuid4().__str__(),
+                                            'tools.websocket.handler_cls': classOfModule }
+               
 
-            os.chdir(prefix)
-
-            m = re.findall('class\s+([\w\_]+)\([\w\_\.]+\):', f)
-
-            if not len(m) > 0:
-                continue
-
-            module_name = m[0]
-        
-
-            setattr(_server, cname, proto)  
-
-            config['/' + cname] = { 'tools.websocket.on': True,
-                                    'request.module_md5': hashlib.md5(f).hexdigest(),
-                                    'request.module_ctime': os.path.getmtime(os.path.realpath(i)),
-                                    'request.module_object': module,
-                                    'request.module_logger': logger(module_name),
-                                    'request.module_uuid': uuid.uuid4().__str__(),
-                                    'tools.websocket.handler_cls': getattr(module, module_name) }
-
-
-            setattr(_server, module_name, proto)    
-
-            config['/' + module_name] = { 'tools.websocket.on': True,
-                                          'request.module_md5': hashlib.md5(f).hexdigest(),
-                                          'request.module_ctime': os.path.getmtime(os.path.realpath(i)),
-                                          'request.module_object': module,
-                                          'request.module_logger': logger(module_name),
-                                          'request.module_uuid': uuid.uuid4().__str__(),
-                                          'tools.websocket.handler_cls': getattr(module, module_name) }
-
-            MODULES.append(module_name)
-            MODULES.append(cname)
+              MODULES.append(module_name)
+              ## do storage to create the tables needed
+              try:
+                stor = storage(conf=module_name)
+              except: ##tables could not be  created
+                pass
+            else:
+              continue ## no class found
+      
 
         os.chdir(curr)
 
@@ -944,6 +925,8 @@ class storage(object):
                 except:
                     dbfolder = "/usr/bin/"
 
+        if not db_type or not host:
+          return None
         if proto:
           logger = cherrypy.config['/' + proto[0]]['request.module_logger']
         else:
@@ -957,6 +940,8 @@ class storage(object):
             host = host + ':' + port
 
         print "ONELINE: using table: " + table
+
+
 
         """
         do we already have a storage object for this?

@@ -19,7 +19,7 @@ db_join_on
 
 """
 
-class JoinTableMod(ol.module):
+class UnionTableMod(ol.module):
     def start(self):
         """ starting join table module """
     	self.pipeline = ol.stream()

@@ -1,5 +1,3 @@
-#! /usr/bin/python
-
 ##############################################################################
 # A practical test module for oneline
 # it is not intended to ran as a test and
