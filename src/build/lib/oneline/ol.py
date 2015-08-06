@@ -1,4 +1,6 @@
-# -*- coding: utf-8 -*- import argparse import json
+# -*- coding: utf-8 -*- 
+import argparse 
+import json
 import bsonlib
 import operator
 import hashlib
@@ -81,47 +83,9 @@ MOBJS = {}
 def str_to_class(str):
     return getattr(sys.modules[__name__], str)
 
-class settings(object):
-    global SETTINGS
-    
-    def init(*arguments, **keywords):
-        pass
-
 @cherrypy.expose
 def proto(self):
     cherrypy.log("Handler created: %s" % repr(cherrypy.request.ws_handler))
-
-@cherrypy.expose
-def proto_():
-    cherrypy.log("Handler created: %s" % repr(cherrypy.request.ws_handler))
-
-
-"""
-downstream packets
-are sent in BSON
-"""
-def downstream():
-    global MODULES
-
-    for i in MODULES:
-        """
-        get a downstream
-        request for this
-        """
-
-        config = scan_config(i + '.conf')
-
-        if 'downstream' in config.keys():
-            if config['downstream']:
-                if 'dispatcher' in config.keys():
-                    sock = socket.socket()
-                    sock.connect((config['dispatcher_address'], config['dispatcher_port']))
-                    packet = sock.recv(2048)
-                    db = storage(caller=caller_name())
-                    pipeline = pipeline(pline, db, {}, config)
-
-                    message = pipeline.run(packet)
-                    sock.send(message)
 
 """
 get the caller information
@@ -169,152 +133,21 @@ def scan_config(caller):
     config = dict()
     proto = re.findall(r'([\w\_]+)\.', caller)
     conf = False
-    has_config = False
 
-    if len(proto) > 0:
-        config['module'] = proto[0]
-        config_name = proto[0] + '.conf'
+    if len(re.findall("\.conf",caller)) == 0:
+        config_file = proto[0] + ".conf"
+        config['module']  = proto[0]
     else:
-        config_name = ''
+        config_file = caller
 
-    curr = os.getcwd()
-
-    try:
-
-        if os.path.exists('/usr/local/oneline/conf/'):
-            os.chdir('/usr/local/oneline/conf')
-            prefix = '/usr/local/oneline/conf'
-            if os.path.isfile(config_name):
-                has_config = True
-                f = open(os.path.realpath(config_name), 'r+').read()
-    
-    except:
-        pass
-    pass
-
-    if not has_config:
-        """
-        if we couldn't find a config file
-        resort to properties in default config
-        """
-        if conf:
-            pass    
-        pass
-    else:
-        broadcast = re.findall("ol_broadcast\s+\=\s+\'(.*)\'", f)
-        if len(broadcast) > 0:
-            config['broadcast'] = broadcast[0]
-        else:
-            config['broadcast'] = 'multiple'
-
-        frequency = re.findall("ol_freq\s+\=\s+\'(.*)\'", f)
-
-        if len(frequency) > 0:
-            config['freq'] = frequency[0]
-
-        logging = re.findall("ol_logging\s+\=\s+\'(.*)\'", f)
-
-        if len(logging) > 0:
-            config['logging'] = logging[0]
-        else:
-            config['logging'] = True
-
-
-        peers = re.findall("ol_peers\s+\=\s+(\d+)", f)
-        
-        if len(peers) > 0:
-            config['peers'] = peers[0]
-
-        mc = re.findall("ol_memcache\s+\=\s+\'(.*)\'", f)
-
-        if len(mc) > 0:
-            config['memcache'] = True
-            try:
-                config['memcache_client'] = memcache.Client(['127.0.0.1:11211'], debug=0)
-            except:
-                config['memcache'] = False
-                config['memcache_client'] = False
-        else:
-            config['memcache'] = False
-
-        multi = re.findall("ol_multiplex\s+\=\s+\'(.*)\'", f)
-
-        if len(multi) > 0:
-            config['multiplex'] = True
-            config['multiplex'] = multi[0]
-
-        upstream = re.findall("ol_upstream\s+\=\s+\'(.*)\'", f)
-
-        if len(upstream) > 0:
-            if upstream[0] == 'yes':
-                config['upstream'] = True
-            else:
-                config['upstream'] = False
-        else:
-            config['upstream'] = False
-
-        ## now find
-        ## its cluster
-        cluster = re.findall("ol_cluster\s+\=\s+\'(.*)\'", f)
-        if len(cluster) > 0:
-            clusterblob = re.findall("ol_cluster\s+\=\s+(.*)", f)[0]
-            config['cluster'] = re.findall("'([\w\d\.]+)'", clusterblob)
-        else:
-            config['cluster'] = False
-
-        downstream = re.findall("ol_downstream\s+\=\s+\'(.*)\'", f)
-        if len(downstream) > 0:
-            if downstream[0] == 'yes':
-                config['downstream'] = True
-            else:
-                config['downstream'] = False
-        else:
-            config['downstream'] = False
-
-        """
-        dispacher = re.findall("ol_dispatcher\s+\=\s+\'(.*)\'", f)
-        if len(dispatcher) > 0:
-            config['dispatcher'] = dispatcher[0]
-        else:
-            config['dispatcher'] = False
-
-        dispatcher = re.findall("ol_dispatcher_address\s+\=\s+\'(.*)\'", f)
-        if dispatcher:
-            config['dispatcher_address'] = dispatcher[0]
-        else:
-            config['dispatcher_address'] = False
-
-        dispatcher = re.findall("ol_dispatcher_port\s+\=\s+\'(.*)\'", f)
-        if dispatcher:
-            config['dispatcher_port'] = dispatcher[0]
-        else:
-            config['dispatcher_port'] = False
-
-        dispatcher = re.findall("ol_dispatcher_timeout\s+\=\s+\'(.*)\'", f)
-        if dispatcher:
-            config['dispatcher_timeout'] = dispatcher[0]
-        else:
-            config['dispatcher_timeout'] = 10
-        """
-
-        stream = re.findall("ol_stream_into\s+\=\s+\'(.*)\'", f)
-        if len(stream) > 0:
-            stream[0] = re.sub("stream:\/\/", "/usr/local/oneline/streams/", stream[0])
-            config['stream_into'] = stream[0]
-        else:
-            config['stream_into'] = False 
-
-
-        """ parse any other key value values """
-        kv = re.findall("([\w_]+)\s+\=\s+\'(.*)\'", f)
-        if len(kv) > 0: 
-          ## tuples
-          for i in kv:
-            config[i[0]] = i[1]
-
-
-
-    os.chdir(curr)
+    keyword = "(.*)\s+?=\s+?'(.*)'"
+    file = open("/usr/local/oneline/conf/"+ config_file).read()
+    lines = file.split("\n")
+    for i in lines:
+      match = re.findall(keyword, i)
+      if match:
+        config[match[0][0]] = match[0][1]
+      
     return config
 
 
@@ -593,8 +426,8 @@ class plugin(WebSocketPlugin):
     def get_client(self, name):
         return self.clients[name]
  
-    def del_client(self, name):
-        del self.clients[name]
+    def del_client(self, name,socket):
+        del self.clients[name][socket]
 
 class server(object):
     global SERVERS
@@ -614,30 +447,16 @@ class server(object):
         """
 
         curr = os.getcwd()
-
-        if os.path.exists('/usr/local/oneline/conf'):
-            os.chdir('/usr/local/oneline/conf')
-            f = open('/usr/local/oneline/conf/Main.conf').read()    
-
-        try:
-            host = re.findall("ol_host\s+\=\s+\'(.*)\'", f)[0]
-        except:
-            pass
-
-        try:
-            port = int(re.findall("ol_port\s+\=\s+\'(.*)\'", f)[0])
-        except:
-            pass
-
+        config = scan_config("Main.conf")
         os.chdir(curr)
 
-        self.host = host 
-        self.port = int(port)
+        self.host = config['ol_host'] if 'ol_host' in config.keys() else "127.0.0.1"
+        self.port = int(config['ol_port']) if 'ol_port' in config.keys() else 9000
         self.path = path 
         self.ssl = False
 
-        cherrypy.config.update({SERVERS['host']: host,
-                        SERVERS['port']: port,
+        cherrypy.config.update({SERVERS['host']: self.host,
+                        SERVERS['port']: self.port,
                     SERVERS['path']: path}) 
 
         if os.path.exists('/usr/local/oneline/socket/'):
@@ -645,8 +464,6 @@ class server(object):
 
         plugin(cherrypy.engine).subscribe()
         cherrypy.process.plugins.PIDFile(cherrypy.engine, piddir + 'oneline.pid.txt').subscribe()
-        cherrypy.process.plugins.Monitor(cherrypy.engine, downstream, frequency=5).subscribe()
-
         cherrypy.tools.websocket = WebSocketTool()
 
     def start(self):
@@ -660,23 +477,7 @@ class server(object):
             os.chdir('/usr/local/oneline/modules')
             prefix = os.path.abspath('/usr/local/oneline/modules')
             files = os.listdir('/usr/local/oneline/modules')        
-        else:
-            if os.path.exists('../../modules/'):
-                prefix = os.path.abspath('../../modules')
-                os.chdir('../../modules')
-                files = os.listdir('./')
-            elif os.path.exists('../modules/'):
-                os.chdir('../modules')
-                prefix = os.path.abspath('../modules')
-                files = os.listdir('./')        
-            elif os.path.exists('./modules/'):
-                os.chdir('./modules')
-                prefix = os.path.abspath('./modules')
-                files = os.listdir('./')
-            else:
-                os.chdir('/usr/local/oneline/modules')
-                prefix = os.path.abspath('/usr/local/oneline/modules')
-                files = os.listdir('/usr/local/oneline/modules')        
+        
 
         config = dict()
         salt = ''
@@ -783,159 +584,40 @@ class storage(object):
             config_name = conf
             caller = config_name
 
-        has_config = False
-        join_table = self.join_table = False
-        join_on = self.join_on =False
-        more_than_one_table = False
-        union_table = self.union_table = False
-        union_on = self.union_on = False
-        omitlist = self.omitlist = False
-        no_table_set = False
-        proto = False
-        
-        curr = os.getcwd()
-
+        config = scan_config(config_name)
         print "ONELINE: " +  caller + "'s " + "config file: " + config_name
+  
+        self.join_table = False
 
-        if table == '':
-            try:
-
-                """
-                for custom loads use the current directory
-                """
-                if custom: 
-                  file = os.path.abspath(curr) + "/" + conf
-                  if os.path.isfile(file):
-                    f = open(file, "r+").read()
-                    has_config = True
-          
-                else:
-                  if os.path.exists('/usr/local/oneline/conf'):
-                      os.chdir('/usr/local/oneline/conf')
-                      prefix = '/usr/local/oneline/conf'
-
-                      if os.path.isfile(os.path.realpath(config_name)):
-                          has_config = True
-                          f = open(os.path.realpath(config_name), 'r+').read()
-
-            except:
-                pass
-
-            try:
-                main = open(prefix + '/Main.conf', 'r+').read()
-            except:
-                try:
-                    main = open('./Main.conf', 'r+').read()
-                except:
-                    pass
+        ## when a db type is not provided
+        ## we should not use the storage object
+        ## TODO:
+        ## provide a mock function  
+        if not 'db_table' in config.keys():
+          return None
             
-            try:
-                db_type = re.findall("db_type\s+\=\s+\'(.*)\'", main)
+        
 
-                ## priminitive check for db_type
-                if len(db_type) > 0:
-                  db_type = db_type[0]
-                else:
-                  no_table_set = 1
-                database = re.findall("db_database\s+\=\s+\'(.*)\'", main)[0]
-                username = re.findall("db_user\s+\=\s+\'(.*)\'", main)[0]
-                password = re.findall("db_pass\s+\=\s+\'(.*)\'", main)[0]
-                table = re.findall("db_table\s+\=\s+\'(.*)\'", main)[0]
-                if re.findall(",",table):
-                    tablesInternal =table.split(",") 
-                    more_than_one_table = True
-                    table = tables[0]
-                else:
-                    tablesInternal = [table]
-                  
-          
-            except:
-                pass
-
-
-
-            ## when a db type is not provided
-            ## we should not use the storage object
-            ## TODO:
-            ## provide a mock function  
-            if no_table_set: 
-              os.chdir(curr)
-              return None
-            
-            if not has_config:
-                """
-                if we couldn't find a config file
-                resort to properties in default config
-                """
-                if conf:
-                    pass    
-                pass
-            else:
-                try:
-                    db_type = re.findall("db_type\s+\=\s+\'(.*)\'", f)
-                    if len(db_type) > 0:
-                      db_type = db_type[0]
-                    else:
-                      no_table_set = True
-              
-                    table = re.findall("db_table\s+\=\s+\'(.*)\'", f)[0]
-                    if re.findall(",", table): 
-                      tablesInternal = table.split(",")
-                      table = tablesInternal[0]
-                    else:
-                      tablesInternal = [table]
-                     
-                    database = re.findall("db_database\s+\=\s+\'(.*)\'", f)[0]
-                    username = re.findall("db_user\s+\=\s+\'(.*)\'", f)[0]
-                    password = re.findall("db_pass\s+\=\s+\'(.*)\'", f)[0]
-                    host = re.findall("db_host\s+\=\s+\'(.*)\'", f)[0]
-                    port = re.findall("db_port\s+\=\s+\'(.*)\'", f)[0]
-                    join_table = re.findall("db_join_table\s+\=\s+\'(.*)\'", f)[0]
-                    join_on = re.findall("db_join_on\s+\=\s+\'(.*)\'", f)[0]
-                except:
-                    pass
-
-               
-
-                if no_table_set: 
-                  return 
-
-                try:
-                    join_table = re.findall("db_join_table\s+\=\s+\'(.*)\'", f)[0]
-                    join_on = re.findall("db_join_on\s+\=\s+\'(.*)\'", f)[0]
-                except:
-                    pass
-
-                try:
-                    union_table = re.findall("db_union\s+\=\s+\'(.*)\'", f)[0]
-                    union_on = re.findall("db_union_on\s+\=\s+\'(.*)\'", f)[0]
-                except:
-                    pass
-
-                try:
-                    omitblob = re.findall("db_omit\s+\=\s+(.*)", f)[0]
-                    omitlist = re.findall("'([\w]+)'", omitblob)
-                except:
-                    pass
-
-                try:
-                    dbfolder = re.findall("db_omit\s+\=\s+(.*)", f)[0] # for sqlite
-                except:
-                    dbfolder = "/usr/bin/"
-
-        if not db_type or not host:
+        if not 'db_type' in config.keys() or not 'db_host' in config.keys():
           return None
         if proto:
           logger = cherrypy.config['/' + proto[0]]['request.module_logger']
         else:
           logger = None
 
-        """ treat mariadb as mySQL """
-        if db_type in ['mariadb']:
-            db_type = 'mysql'   
-
-        if db_type in ['mongodb']:
-            host = host + ':' + port
+        db_type = config['db_type']
+        db_user = config['db_user']
+        db_pass = config['db_pass']
+        db_table = config['db_table']
+        db_host =config['db_host']
+        if re.findall(",", config['db_table']):
+          tablesInternal = config['db_table'].split(",")
+          table = tables[0]
+        else:
+          tablesInternal  = [config['db_table']]
+          table = config['db_table']
+        if 'join_table' in config.keys():
+          join_table =config['join_table']
 
         print "ONELINE: using table: " + table
 
@@ -945,32 +627,19 @@ class storage(object):
         do we already have a storage object for this?
         """
 
-        if db_type in ['couchdb']:
-            _OL_DB = self.db = DAL(db_type + '://' + host + ':5984/')
-        else:
-            if db_type == 'sqlite':
-                _OL_DB = self.db = DAL('sqlite://' + database + '.db', migrate_enabled=False, folder=dbfolder, auto_import=True)    
-            else:   
-                if silent:
-                  _OL_DB = self.db = DAL(db_type + '://' + username + ':' + password + '@' + host + '/' + database)
-                else:
-                  _OL_DB = self.db = DAL(db_type + '://' + username + ':' + password + '@' + host + '/' + database, migrate_enabled=False)
-
+        if db_type == 'sqlite':
+            _OL_DB = self.db = DAL('sqlite://' + database + '.db', migrate_enabled=False, folder=dbfolder, auto_import=True)    
+        else:   
+            if silent:
+              _OL_DB = self.db = DAL(db_type + '://' + username + ':' + password + '@' + host + '/' + database)
+            else:
+              _OL_DB = self.db = DAL(db_type + '://' + username + ':' + password + '@' + host + '/' + database, migrate_enabled=False)
 
         
-        print "ONELINE: connected to " + db_type
-
-        """
-        when silent mode is on do not further check
-        """
-      
-        self.table = table
-        self.tables = tablesInternal
         if silent:
           ## return our current
           ## instance
           ##
-          os.chdir(curr)
           return None
       
         
@@ -985,14 +654,6 @@ class storage(object):
             tables = self.db.executesql('SHOW TABLES; ')
 
             self.db.commit()
-        elif db_type in ['mongodb', 'couchdb']:
-
-            try:
-                fieldsblob = re.findall("db_fields\s+\=\s+(.*)", f)[0]
-                fields = re.findall("'([\w]+)'", fieldsblob)
-            except:
-                pass
-
         elif db_type in ['sqlite']:
             tables = self.db.executesql('SELECT name FROM sqlite_master WHERE type = "table"') 
             self.db.commit()
@@ -1002,62 +663,59 @@ class storage(object):
             tables = self.db.executesql("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE';")
             self.db.commit()
 
+        for i in tables:
+            table_name = i[0]
 
-        if not db_type in ['mongodb', 'couchdb']:
+            args = []
+            args.append(table_name)
 
-            for i in tables:
-                table_name = i[0]
-
-                args = []
-                args.append(table_name)
-
-                if db_type in ['mysql']:
-                    schema = self.db.executesql('explain ' + i[0])
-      
-                elif db_type in ['sqlite']:
-                    schema = self.db.executesql('PRAGMA table_info({0});'.format(i[0]))
-                    
-                elif db_type in ['postgres']:
-                    schema = self.db.executesql("select column_name, data_type, character_maximum_length from INFORMATION_SCHEMA.COLUMNS where table_name = '" + i[0] + "';")
-                self.db.commit()
-                """
-                update when we don't find an id field try to find an primary_key or auto_increment 
-                and use in place. if that doesn't work throw an error
+            if db_type in ['mysql']:
+                schema = self.db.executesql('explain ' + i[0])
+  
+            elif db_type in ['sqlite']:
+                schema = self.db.executesql('PRAGMA table_info({0});'.format(i[0]))
                 
+            elif db_type in ['postgres']:
+                schema = self.db.executesql("select column_name, data_type, character_maximum_length from INFORMATION_SCHEMA.COLUMNS where table_name = '" + i[0] + "';")
+            self.db.commit()
+            """
+            update when we don't find an id field try to find an primary_key or auto_increment 
+            and use in place. if that doesn't work throw an error
+            
+            """
+            has_id = False
+            has_auto_increment = False
+            for j in schema:
+              if db_type in ['sqlite']:
+                if j[1] == "id":
+                  has_id = 1
+              else:
+                if j[0] == "id":
+                  has_id = 1
+            kw = dict() 
+            for j in schema:
                 """
-                has_id = False
-                has_auto_increment = False
-                for j in schema:
-                  if db_type in ['sqlite']:
-                    if j[1] == "id":
-                      has_id = 1
-                  else:
-                    if j[0] == "id":
-                      has_id = 1
-                kw = dict() 
-                for j in schema:
-                    """
-                    structure is as follows:
-                    {0 -> field_name, 1 -> type, 2 -> type, 3 ->, 4 -> default, 5 -> column auto increment}
-                    for sqlite:
-                    {0 -> int count, 1 -> field_name, 3 -> type }
-                    """
-                    if db_type in ['sqlite']:
-                        if not has_id and (j[5] == "auto_increment" or j[3] == "PRI"):
-                          args.append(Field(j[1], type='id'))
-                          has_auto_increment = 1
-                          kw['primarykey'] = [j[1]]
-                        else:
-                          args.append(Field(j[1]))
+                structure is as follows:
+                {0 -> field_name, 1 -> type, 2 -> type, 3 ->, 4 -> default, 5 -> column auto increment}
+                for sqlite:
+                {0 -> int count, 1 -> field_name, 3 -> type }
+                """
+                if db_type in ['sqlite']:
+                    if not has_id and (j[5] == "auto_increment" or j[3] == "PRI"):
+                      args.append(Field(j[1], type='id'))
+                      has_auto_increment = 1
+                      kw['primarykey'] = [j[1]]
                     else:
-                        if not has_id and (j[5] == "auto_increment" or j[3] == "PRI"):
-                          args.append(Field(j[0], type='id'))
-                          kw['primarykey'] = [j[0]]
-                          has_auto_increment = 1
-                        else:
-                          args.append(Field(j[0]))
+                      args.append(Field(j[1]))
+                else:
+                    if not has_id and (j[5] == "auto_increment" or j[3] == "PRI"):
+                      args.append(Field(j[0], type='id'))
+                      kw['primarykey'] = [j[0]]
+                      has_auto_increment = 1
+                    else:
+                      args.append(Field(j[0]))
 
-                
+              
 
                 if not has_id and not has_auto_increment:
                   ## warning here!
@@ -1094,29 +752,6 @@ class storage(object):
 
         self.table = table
 
-        if join_table:
-            self.join_table = join_table
-        else:
-            self.join_table = False
-
-        if join_on:
-            self.join_on = join_on
-
-        if union_table:
-            self.union_table = union_table
-        else:
-            self.union_table = False
-
-        if union_on:
-            self.union_on = union_on
-
-        if omitlist:
-            self.omitlist = omitlist
-        else:
-            self.omitlist = False
-
-        os.chdir(curr)
-
 
     """
     get a storage object    
@@ -1147,7 +782,11 @@ class module(WebSocket):
             return self.start()
 
     def closed(self, *args):
+        client = self.pipeline.client
+        uuid =self.pipeline.caller.unique
+        cherrypy.engine.publish("del-client",uuid, client)
         if 'end' in dir(self):
+            
             return self.end()
 
     def received_message(self, m):
@@ -1215,39 +854,14 @@ class pipeline(object):
             self.caller.freq = 0
         else:
             self.caller.freq = int(self.config['freq'])
-
-        if self.config['memcache']:
-            if 'memcache_client' in self.config.keys():
-                self.memcache = self.config['memcache_client'] if self.config['memcache_client'] \
-                                                               else None
-
-            else:
-                self.memcache = None
-        else:
-            self.memcache = None
- 
-
-
-        if 'multiplex' in self.config.keys():
-            if self.config['multiplex']:
-                self.multiplex = True 
-                self.multiplex_amount = int(self.config['multiplex'])
-                self.multiplex_current = 0
-                self.multiplex_container = []
-
-            else:
-                self.multiplex = False
-        else:
-            self.multiplex = False
-
-
         self.caller.config = self.config
         self.logger = cherrypy.config['/' + config['module']]['request.module_logger']
 
         self.setup()
 
     def setup(self):
-        cherrypy.engine.publish('add-client', self.caller.unique, self.caller)
+        client = cherrypy.engine.publish('add-client', self.caller.unique, self.caller)
+        self.client = client
 
 
     """
@@ -1306,49 +920,7 @@ class pipeline(object):
         check if we need to update the config
         """
         message = TextMessage(message.__str__())
-        """ first check memcache """
-        if not self.memcache is None:
-            salt = hashlib.md5(message.__str__()).hexdigest()
-            m = self.memcache.get(salt)
-
-            if m:
-                bytes = m
-
-                if self.multiplex:
-                    if self.multiplex_current == self.multiplex_amount:
-                        """ send the message """
-
-                        message = dict(message=self.multiplex_container)
-                        bytes = map(ord, bsonlib.dumps(message)).__str__()
-
-                        for i in client:
-                            i.send(bytes)
-
-                        try:
-                            inspect.currentframe().f_back.f_locals['self'].provider(bytes)
-                        except:
-                            pass
-
-                        self.multiplex_current = 0
-                        self.multiplex_container = []
-
-                    else:
-                        """ store the message """
-                        #self.multiplex_container.append(m)
-                        self.multiplex_current += 1
-
-                else:
-                    for i in client:
-                        i.send(bytes)
-
-                    try:
-                        inspect.currentframe().f_back.f_locals['self'].provider(bytes)
-                    except:
-                        pass                
-
-                _time.sleep(self.caller.freq)
-                return
-
+        
         order = m['order']
         p = m['packet']
 
@@ -1365,11 +937,6 @@ class pipeline(object):
         ## any existing data we need to copy
         ## this is for when the module appends
         ## data. we need to just return it to the client
-        d = []
-        if 'data' in m.keys():
-          d = m['data']
-        else:
-          d = []
         if 'response' in m.keys():
           r = m['response']
         else:
@@ -1402,53 +969,18 @@ class pipeline(object):
 
             c += 1
 
-        if self.storage.union_table:
-            mp = m
-            m = i_m
-
-            _OL_DB = self.storage.get()['db']
-            _OL_TABLE = self.storage.get()['table']
-            self.storage.set('table', self.storage.union_table)
-
-            c = 0
-            for i in self._objs:
-                try:
-                    i.storage = self.storage
-                    i.logger = self.logger
-
-                    if c == 0:
-                        m = i.run(m)
-                    else:
-                        m = i.run(self._append(m, p))
-                except:
-                    i.log()
-                    c += 1
-
-                c += 1
-
-            m = list(set(m + mp))
-        else:
-            pass
+      
+          
+        if len(self._objs) >  0 and len(m) > 0:  
+          m = [dict(i.items() + [('confidence', 1)]) for i in m]
 
         """
-        if we dont have a confidence value by now 
-        append one to all before filtering
+        by now m should be a nodecollection.
+        we must filter this to only the needed
+        amount of node:ws
         """
-        try:
-            if not 'confidence' in m[0].keys():
-                m = [dict(i.items() + [('confidence', 1)]) for i in m]
-
-            """
-            by now m should be a nodecollection.
-            we must filter this to only the needed
-            amount of node:ws
-            """
-            if isinstance(m, list):
-                m = self._filter(m)
-
-        except:
-            pass
-
+        if isinstance(m, list):
+            m = self._filter(m)
 
         """
         add any join table if set
@@ -1491,88 +1023,6 @@ class pipeline(object):
                 self.logger.append(dict(message="Could not find join table", object=self.__str__()))
 
         """
-        omit any fields
-        that need to be
-        erased
-        """
-        if self.storage.omitlist:
-            for i in range(0, len(m)):
-                for j in self.storage.omitlist:
-                    if j == 'confidence':
-                        continue
-
-                    del m[i][j]
-
-        """
-        if this is a downstream
-        request simply return it
-        """
-        if self.config['downstream']:
-            return m
-
-        """
-        is this an upstream
-        request?
-        then bind a socket
-        to the request, 
-        and listen for
-        the responses
-        when all responses
-        are fulfilled, return
-        """
-        if self.config['upstream']:
-            faddrs = []
-            cluster = self.config['cluster']
-            addr = self.config['dispatcher_address']
-            timeout = int(self.config['dispatcher_timeout']);
-            port = int(self.config['dispatcher_port'])
-            print "Upstreaming to other servers"
-
-            sock = socket.socket()
-            sock.bind((addr, port))
-            sock.listen(5)
-
-            try:
-                start = _time.time()
-                while True:
-                    now = _time.time()
-
-                    if now - start > timeout:
-                        break
-
-                    if len(faddrs) == len(cluster):
-                        break
-
-                    client, addr = sock.accept()
-
-                    if not addr in self.config.cluster:
-                        continue
-
-                    ## dont do it twice
-                    if addr in faddrs:
-                        continue
-
-                    faddrs.append(addr)
-                    client.send(m['packet'])
-
-                    message_ = client.recv(20024)
-
-                    literal = ast.literal_eval(message_.__str__())
-
-                    """
-                    ensure the message fits in
-                    """
-
-                    m_ = bsonlib.loads(bytearray(literal).__str__())
-
-                    """
-                    now merge both m_ and m
-                    """
-            except:
-                self.logger.append(dict(message="Unable to bind socket to upstream", object=self.__str__()))
-
-
-        """
         if results are met
         we need to run the
         provider. First get the client
@@ -1582,105 +1032,19 @@ class pipeline(object):
         client = cherrypy.engine.publish('get-client', self.caller.unique).pop()
    
         cherrypy.engine.log("Client is: %s" % client.__str__())
-        
-        try:
-            data = unicodeAll(d) 
-            m = dict(data=data, status=u'ok', response=r, connection_uuid=unicode(connection_uuid), uuid=unicode(uuid), timestamp_request=timestamp, timestamp_response=_time.time())
-        except:
+       
+        if len(m) > 0 and len(self._objs) > 0:
+            data = unicodeAll(m) 
+            m = dict(data=m, status=u'ok', response=r, connection_uuid=unicode(connection_uuid), uuid=unicode(uuid), timestamp_request=int(timestamp), timestamp_response=_time.time())
+        else:
             
-            m = dict(data=[], status=u'empty', response=r, connection_uuid=unicode(connection_uuid), uuid=unicode(uuid), timestamp_request=timestamp, timestamp_response=_time.time())
-        if d:
-
-          ## d just needs to by a list
-          ## with dictionaries
-          for i in d:
-            i['confidence'] = 1
-            m['data'].append(i)
-
+            m = dict(data=[], status=u'empty', response=r, connection_uuid=unicode(connection_uuid), uuid=unicode(uuid), timestamp_request=int(timestamp), timestamp_response=_time.time())
 
         bytes = map(ord, bsonlib.dumps(m)).__str__()
 
-        if self.multiplex:
-            if self.multiplex_current == self.multiplex_amount:
-                """ send the message """
-
-                message = dict(message=self.multiplex_container)
-                bytes = map(ord, bsonlib.dumps(message)).__str__()
-
-                for i in client:
-                    i.send(bytes)
-
-                try:
-                    inspect.currentframe().f_back.f_locals['self'].provider(bytes)
-                except:
-                    pass
-
-                self.multiplex_current = 0
-                self.multiplex_container = []
-
-            else:
-                """ store the message """
-                self.multiplex_container.append(m)
-                self.multiplex_current += 1
-
-        else:
-            for i in client:
-                ## trying to send to a dead client will not work
-                try: 
-                  i.send(bytes)   
-                except:
-                  pass
-
-            try:
-                inspect.currentframe().f_back.f_locals['self'].provider(bytes)
-            except:
-                pass
-
-
-        """ stream output into another file """
-        """ we recognize the following file types: """
-        """ .php, .py, .pl, .rb, and .txt """
-        """ first four will invoke their interpreter. .txt will """
-        """ merely dump contents """
-        """ fix for subprocess """
-        """ NOTE: interop data in this case should always be JSON to  """
-        """ let ease of integration. For this cause it is best to use 'JSON' as """
-        """ interop when using stream_into """
-        if self.config['stream_into']:
-            type = re.findall("\.(\w+)$", self.config['stream_into'])
-            if len(type) > 0:
-                inter = type[0]
-
-            try:
-                if inter == 'php':
-                    os.system("php {0} '{1}'".format(os.path.abspath(self.config['stream_into']), json.dumps(m)))
-
-                elif inter == 'py':
-                    os.system("python {0} '{1}'".format(self.config['stream_into'], json.dumps(m)))
-
-                elif inter == 'pl':
-                    os.system("perl {0} '{1}'".format(self.config['stream_into'], json.dumps(m)))
-
-                elif inter == 'rb':
-                    os.system("ruby {0} '{1}'".format(self.config['stream_into'], json.dumps(m)))
-
-                elif inter == 'java':
-                    ##os.system("javac {0}".format(self.config['stream_into']) 
-                    os.system("java {0} {1}".format(self.config['stream_into'], json.dumps(m)))
-
-                elif inter == 'jar':
-                    os.system("java -jar {0} {1}".format(self.config['stream_into'], json.dumps(m)))
-                
-
-            except:
-                self.logger.append(dict(message="Unable to call ScriptingEngine for {1}".format(inter), object=self.__str__()))
-
-
-
-        if not self.memcache is None:
-            salt = hashlib.md5(message.__str__()).hexdigest()
-            self.memcache.set(salt, bytes)
-
+        for i in client:
+            ## trying to send to a dead client will not work
+            i.send(bytes)   
         _time.sleep(self.caller.freq)
 
 """
