@@ -1298,10 +1298,10 @@ class pipeline(object):
             m = message.as_dict()
             message = pack(m)
           
-             
-        uuid =m['uuid'] 
-        timestamp = m['timestamp']
-        connection_uuid   = m['connection_uuid']
+
+        if 'connection_uuid' in m.keys() and not 'connection_uuid' in dir(self):
+          self.connection_uuid = m['connection_uuid']
+               
         """
         check if we need to update the config
         """
@@ -1533,9 +1533,9 @@ class pipeline(object):
             sock.listen(5)
 
             try:
-                start = _time.time()
+                start = time_.time()
                 while True:
-                    now = _time.time()
+                    now = time_.time()
 
                     if now - start > timeout:
                         break
@@ -1585,10 +1585,10 @@ class pipeline(object):
         
         try:
             data = unicodeAll(d) 
-            m = dict(data=data, status=u'ok', response=r, connection_uuid=unicode(connection_uuid), uuid=unicode(uuid), timestamp_request=int(timestamp), timestamp_response=_time.time())
+            m = dict(data=data, status=u'ok', response=r, connection=self.connection_uuid)
         except:
             
-            m = dict(data=[], status=u'empty', response=r, connection_uuid=unicode(connection_uuid), uuid=unicode(uuid), timestamp_request=int(timestamp), timestamp_response=_time.time())
+            m = dict(data=[], status=u'empty', response=r, connection=self.connection_uuid)
         if d:
 
           ## d just needs to by a list

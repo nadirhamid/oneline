@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*- import argparse 
-import json
+# -*- coding: utf-8 -*- import argparse import json
 import bsonlib
 import operator
 import hashlib
@@ -588,8 +587,7 @@ class plugin(WebSocketPlugin):
  
     def add_client(self, name, websocket):
         if not name in self.clients.keys():
-            self.clients[name] = []
-
+            self.clients[name] = [] 
         self.clients[name].append(websocket)
  
     def get_client(self, name):
@@ -1204,12 +1202,14 @@ class pipeline(object):
         self.caller = caller
         self.config = config
         self.blob = []
-
+       
         if not 'broadcast' in self.config.keys() or self.config['broadcast'] == 'singular':
             self.caller.unique = uuid.uuid4().__str__()
+      
         else:
             """ use the same unique id as the modules registered one """
-            self.caller.unique = cherrypy.config['/' + config['module']]['request.module_uuid']
+            self.caller.unique = cherrypy.config['/' +config['module']]['request.module_uuid'] 
+        """ uuid to identify this connection """
 
         if not 'freq' in self.config.keys():
             self.caller.freq = 0
@@ -1225,6 +1225,7 @@ class pipeline(object):
                 self.memcache = None
         else:
             self.memcache = None
+ 
 
 
         if 'multiplex' in self.config.keys():
@@ -1297,7 +1298,10 @@ class pipeline(object):
             m = message.as_dict()
             message = pack(m)
           
-
+             
+        uuid =m['uuid'] 
+        timestamp = m['timestamp']
+        connection_uuid   = m['connection_uuid']
         """
         check if we need to update the config
         """
@@ -1529,9 +1533,9 @@ class pipeline(object):
             sock.listen(5)
 
             try:
-                start = time_.time()
+                start = _time.time()
                 while True:
-                    now = time_.time()
+                    now = _time.time()
 
                     if now - start > timeout:
                         break
@@ -1574,15 +1578,17 @@ class pipeline(object):
         provider. First get the client
         this message was received from
         """
-
+      
         client = cherrypy.engine.publish('get-client', self.caller.unique).pop()
+   
+        cherrypy.engine.log("Client is: %s" % client.__str__())
         
         try:
             data = unicodeAll(d) 
-            m = dict(data=data, status=u'ok', response=r)
+            m = dict(data=data, status=u'ok', response=r, connection_uuid=unicode(connection_uuid), uuid=unicode(uuid), timestamp_request=timestamp, timestamp_response=_time.time())
         except:
             
-            m = dict(data=[], status=u'empty', response=r)
+            m = dict(data=[], status=u'empty', response=r, connection_uuid=unicode(connection_uuid), uuid=unicode(uuid), timestamp_request=timestamp, timestamp_response=_time.time())
         if d:
 
           ## d just needs to by a list
@@ -1619,7 +1625,11 @@ class pipeline(object):
 
         else:
             for i in client:
-                i.send(bytes)   
+                ## trying to send to a dead client will not work
+                try: 
+                  i.send(bytes)   
+                except:
+                  pass
 
             try:
                 inspect.currentframe().f_back.f_locals['self'].provider(bytes)
