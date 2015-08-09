@@ -199,6 +199,50 @@ without having websocket support in the target browser
 
 - more fixes 
 
+0.8.1
+
+  - drop features:
+    multiplexing
+      multiplexing is no longer available in oneline. This feature was not
+      very optimized and was not useful. Maybe something to consider for  
+      implementating large data packets in the future, more in TODO
+
+    memcached
+      memcached while optimized dataflow was not useful in most scenarios
+      as it was not consistent with the changing of data. Maybe something
+      in the future 
+
+    downstreaming, upstreeaming
+      feature was not fully functional, as a result has been dropped
+
+
+    oneline clustering
+      not fully functional, buggy and dropped
+
+    union tables
+      currently only join tables will be used. Union tables can be simulated 
+      through writing the modules individually and using the db object directly
+
+    db omit fields
+      these were used to hide precious you would not need. This like union tables
+      can be done separatly
+
+    language streams
+      these were not implemented in modular way, and have been dropped.
+
+    - preserved,  refined
+      - database now only supports
+          MySQL, PostGresQL, SQLite3
+      - Controllers  have been added as a simple way to maintain websocket applications
+          examples: 
+            oneline-client --controller "my_app" "init"
+              {constructs all db related expressions and starts oneline-server}
+            oneline-client --controller "my_app" "clean" 
+              {cleans the oneline application}
+        for a full list of features please view the Controller implementation, in /controllers/Example_controller.py
+
+
+
 
 
 

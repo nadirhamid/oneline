@@ -41,8 +41,6 @@ _OL_DB = []
 _OL_DBS = []
 _OL_AGENT = {}
 _OL_TABLE = '' ## the used table
-OL_TABLE_REAL = '' ## real  table object
-_OL_TABLES = [] ## tables used in application
 _OL_CURRENT_APP = "" ## used by the cli
 """
 shorthand for operator logic. Thanks to
@@ -345,19 +343,6 @@ def db():
   return _OL_DB
 
 
-def table(tablename=False):
-  global _OL_TABLE_REAL
-  global _OL_TABLES
-  if tablename: 
-    for i in _OL_TABLES:
-      if i.name ==tablename: 
-        return i
-  else:
-    return _OL_TABLE_REAL
-  return False
-    
-
-
 """
 parse the config
 and provide a key value structure
@@ -609,13 +594,9 @@ class storage(object):
         db_user = config['db_user']
         db_pass = config['db_pass']
         db_table = config['db_table']
+        database =config['db_database']
         db_host =config['db_host']
-        if re.findall(",", config['db_table']):
-          tablesInternal = config['db_table'].split(",")
-          table = tables[0]
-        else:
-          tablesInternal  = [config['db_table']]
-          table = config['db_table']
+        table =config['db_table']        
         if 'join_table' in config.keys():
           join_table =config['join_table']
 
@@ -729,27 +710,10 @@ class storage(object):
                 else:
                   self.db.define_table(*args)
 
-
-            if not table in self.db.tables:
-                raise NameError('ONELINE: This table does not exist in the database')
-
-        else:
-            args = []
-
-            args.append(table)
-
-            for i in fields:
-                args.append(Field(i))
-
-            self.db.define_table(*args)
-
         self.db.commit()
         _OL_TABLE = table
         _OL_DB = self.db
-        for i in tablesInternal:
-          _OL_TABLES.append(getattr(_OL_DB, i))
-        _OL_TABLE_REAL = getattr(_OL_DB, _OL_TABLE)
-
+        
         self.table = table
 
 
@@ -782,9 +746,6 @@ class module(WebSocket):
             return self.start()
 
     def closed(self, *args):
-        client = self.pipeline.client
-        uuid =self.pipeline.caller.unique
-        cherrypy.engine.publish("del-client",uuid, client)
         if 'end' in dir(self):
             
             return self.end()
@@ -1038,13 +999,17 @@ class pipeline(object):
             m = dict(data=m, status=u'ok', response=r, connection_uuid=unicode(connection_uuid), uuid=unicode(uuid), timestamp_request=int(timestamp), timestamp_response=_time.time())
         else:
             
-            m = dict(data=[], status=u'empty', response=r, connection_uuid=unicode(connection_uuid), uuid=unicode(uuid), timestamp_request=int(timestamp), timestamp_response=_time.time())
+            m = dict(data=[], status=u'ok', response=r, connection_uuid=unicode(connection_uuid), uuid=unicode(uuid), timestamp_request=int(timestamp), timestamp_response=_time.time())
 
         bytes = map(ord, bsonlib.dumps(m)).__str__()
 
         for i in client:
             ## trying to send to a dead client will not work
-            i.send(bytes)   
+            try:
+              i.send(bytes)   
+            except:
+              self.logger.log(dict(addr='',object=self.__str__(), time=_time.time(), message="Lost a connection, message was not sent"))
+      
         _time.sleep(self.caller.freq)
 
 """
