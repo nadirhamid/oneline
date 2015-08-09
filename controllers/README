@@ -1,0 +1,13 @@
+Oneline Controllers
+-----------------------------------------------------------
+
+Oneline controllers are a simple way to manage an application through the oneline cli
+you can currently define these functions in your controller file
+
+  my_module_init/2 -- two options initialize the SQL, and start the oneline server
+  my_module_clean/1 -- option for the SQL cleaning
+  my_module_stop/1 -- optional option signal a stop for you application
+  my_module_restart/0 -- restart oneline
+
+"my_module" should be replaced by your module name
+
