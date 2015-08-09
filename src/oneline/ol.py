@@ -162,6 +162,72 @@ def stream(agent='', pline='', db=''):
     return pipeline(pline, db, obj, scan_config(caller_name()))
 
 
+"""
+      ol.query(db.table.id==1)
+      query = ol.execute(single=True, last=True)
+     
+      print query.name 
+     
+      or 
+      ol.query(db.table.name.like("Nadir"))
+      ol.query(db.table.age=="23")
+      ol.query(db.table.develops="PHP") 
+      
+      results = ol.execute(single=True,last=True,serialized=True)
+
+      
+      return json.dumps(results)
+"""
+
+def query(query_piece, type="&"):
+  global _OL_QUERY
+  _OL_QUERY.append(dict(expr=query_piece, op=type))
+
+def nextcheck(pieces, cnt, pred):
+  list = []
+  list.append(pieces[cnt]['expr'])
+  cnt +=1
+  while pieces[cnt]['op'] == pred:
+    list.append(pieces[cnt]['expr'])
+    cnt += 1
+  return list
+
+def execute(single=False,last=True, serialized=True):
+  global _OL_DB
+  global _OL_QUERY
+  querypieces = []
+  for i in range(0, len(_OL_QUERY)):
+    piece = []
+    pieces = nextcheck(_OL_QUERY,i,  i['op'])
+    if i['op'] == "&":
+      querypieces.append(reduce(lambda a,b: (a&b), pieces))
+    else:
+      querypieces.append(reduce(lambda a,b: (a|b), pieces))
+      
+   
+  fullquery = reduce(lambda a,b: (a&b),querypieces)
+        
+  result =  _OL_DB(fullquery).select()
+  if result:
+    _OL_QUERY = []
+  else:
+    raise Exception("Could not execute query")
+
+  if single:
+    if last:
+      result =  result.last()
+    else:
+      result = result.first()
+
+  if serialized and not single:
+    return result.as_list()
+  if serialized:
+    return result.as_dict()
+
+  return result
+ 
+
+
 
 class request(object):
   def __init__(self, requestCurrent=dict()):
@@ -293,7 +359,12 @@ def controller_init(sql='',startserver=False, name=''):
           print "Could not execute: " + query
     
   if startserver:
-    olcli.startserver()
+    return olcli.startserver()
+  else:
+    ## return true by default even if db
+    ## fails
+    ## the effort will be seen on screen
+    return True
 
 def allwhitespace(str):
   for i in range(0, len(str)):
@@ -516,7 +587,11 @@ class server(object):
         cherrypy.config.update({ 'request.modules_md5_snapshot': hashlib.md5(salt).hexdigest() })
 
         _OL_SERVER = _server(self.host, self.port, self.ssl)
-        return cherrypy.quickstart(_OL_SERVER, '', config=config)  
+        cherrypy.quickstart(_OL_SERVER, '', config=config)  
+        ## return a start by default
+        ## if cherrypy errors it will on its
+        ## own thread
+        return 1
 
 
     def stop(self):
@@ -555,6 +630,7 @@ class storage(object):
         global _OL_TABLE
         import ol
 
+        proto = False
         if conf == '':
             if caller == '':
                 caller = caller_name()
@@ -596,7 +672,7 @@ class storage(object):
         db_table = config['db_table']
         database =config['db_database']
         db_host =config['db_host']
-        table =config['db_table']        
+        self.table =table =config['db_table']        
         if 'join_table' in config.keys():
           join_table =config['join_table']
 
@@ -723,7 +799,7 @@ class storage(object):
     def get(self):
 
         self.db.commit()
-        return dict(db=self.db, table=self.table, tables=self.tables)
+        return dict(db=self.db, table=self.table)
 
     """
     set something
@@ -742,6 +818,11 @@ Websocket
 """
 class module(WebSocket):
     def opened(self):
+
+        """  bind the basics """
+        self.db = db() 
+        self.config = scan_config(caller_name())
+
         if 'start' in dir(self):
             return self.start()
 

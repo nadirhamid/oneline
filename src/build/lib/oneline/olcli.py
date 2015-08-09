@@ -28,9 +28,20 @@ class Runtime(object):
         self.args = args
         self.status  = False
         self.type = 'SERVER'
+        self.controllerOpt = False
+        self.controller = False
+        self.file =False
+        self.remove = False
+        self.removeOpt = False
         self.port = 9000 
         self.ip = "127.0.0.1"
+        self.serveropts = ['start', 'stop', 'restart', 'start_server', 'stop_server', 'start_forwarder']
+        self.clientopts =['init', 'pack', 'remove', 'controller','list']
+        self.controlleractions =['init', 'restart','stop', 'clean']
         a = self.args
+        if len(a) == 1:
+          return self._help()
+        self.secondopt =a[1]
         for _i in range(0, len(a)):
             i = a[_i]
             try:
@@ -42,10 +53,6 @@ class Runtime(object):
             except:
                 k = a[_i]
                 
-            if i in ['-c', '--client']:
-                self.type = 'CLIENT'
-            if i in ['-s', '--server']:
-                self.type = 'SERVER'
             if i in ['-h', '--help']:
                 self.help = True
             if i in ['-g', '--graceful']:
@@ -58,13 +65,14 @@ class Runtime(object):
                 self.stop = True
             if i in ['-p', '--pack']:
                 self.pack = True
-                self.file = j
-            if i in ['init', '--init'] and not self.controller:
+                if j != i:
+                  self.file = j
+            if i in ['init', '--init'] and not self.controllerOpt:
                 self.init = j 
-            if i in ['bundle', '--bundle']:
-                self.bundle = j
             if i in ['remove', '--remove']:
-                self.remove = j
+                self.removeOpt = True
+                if j != i:
+                  self.remove = j
             if i in ['info', '--info']:
                 self.info = j
             if i in ['-p', '--port']:
@@ -88,10 +96,13 @@ class Runtime(object):
             if i in ['-v', '--version']:
                 self.version = True
             if i  in ['--controller']:
-                self.controller = j
-                self.controllerAction = k
-            if i in ['-e', '--edit']:
-                self.edit = j
+                self.controllerOpt = True
+
+                if j in self.controlleractions:
+                  self.controllerAction = j 
+                else:
+                  self.controller = j
+                  self.controllerAction =k
             if i in ['--start-ui', '--init-ui', '--ui']:
                 self.ip = '127.0.0.1'
                 self.port = 991
@@ -105,7 +116,30 @@ class Runtime(object):
             return
 
         self.perform()
+  
+    """ based on second option """
+    def get_type(self):
+      import re
+      opt = self.secondopt
+      withouthyphen = re.sub("\-\-", "", opt)
+      if withouthyphen in self.serveropts:
+        return "SERVER"
+      return "CLIENT"
 
+    def get_seed(self):
+      if os.path.isfile(os.getcwd()+"/.oneline.seed"): 
+        seedFile = open(os.getcwd() +"/.oneline.seed", "r").read()
+        import re
+        contents = re.findall("ONELINE_MODULE=(.*)", seedFile)
+        if contents:
+          return contents[0]
+      return ""
+    def get_mod_dir(self, modulename):
+      if os.path.isfile("/usr/local/oneline/seeds/" +modulename):
+        file =open("/usr/local/oneline/seeds/" +modulename).read()
+        return file
+      return False
+      
     def perform(self):
         global statusTrans
         if 'settings' in dir(self):
@@ -128,9 +162,6 @@ class Runtime(object):
 
             print "Oneline UI running on {0}:{1}".format(self.ip, self.port)
             
-        if 'edit' in dir(self):
-            print "Opening {0} for editing..".format(self.edit)
-            os.system("vim /usr/local/oneline/modules/{0}.py".format(self.edit))
         if 'list' in dir(self):
             print "List of all modules"
             modpath = "/usr/local/oneline/modules/"
@@ -154,7 +185,7 @@ class Runtime(object):
         take the name provided to the command 
         and perform the needed symbolic links
         so
-        oneline-client --pack "wikipedia-module" 
+        oneline --pack "wikipedia-module" 
         looks at:
 
         wikipedia-module.html
@@ -164,7 +195,11 @@ class Runtime(object):
         if 'pack' in dir(self):
            print("Packing Oneline Module.. please wait")
            cwd = os.getcwd()
-           files = [self.file + ".py", self.file + ".html", self.file + ".conf"]
+           if self.file:
+             module= self.file
+           else:
+             seed = self.get_seed()
+           files = [module + ".py", module + ".html", module + ".conf"]
            for i in files:
               if not os.path.isfile(os.path.abspath(i)):
                 print "Couldn\'t find: %s, exiting"  % (i)
@@ -175,22 +210,22 @@ class Runtime(object):
            ## links
 
            os.chdir("/usr/local/oneline/modules/")
-           os.system("rm -rf ./" + (self.file + "*"))
+           os.system("rm -rf ./" + (module + "*"))
 
            print "Making Symbolic links.."
-           print "Linking: " + self.file+".py"
-           os.system("ln -s " + os.path.abspath(cwd + "/" + (self.file+".py")))
+           print "Linking: " + module+".py"
+           os.system("ln -s " + os.path.abspath(cwd + "/" + (module+".py")))
 
            os.chdir("/usr/local/oneline/conf/")
-           print "Linking: " + self.file + ".conf"
-           os.system("ln -s " + os.path.abspath(cwd + "/" + (self.file + ".conf")))
+           print "Linking: " + module + ".conf"
+           os.system("ln -s " + os.path.abspath(cwd + "/" + (module + ".conf")))
          
            os.chdir("/usr/local/oneline/controllers/")
-           print "Linking: "  + self.file + "_controller.py"
-           os.system("ln -s " + os.path.abspath(cwd + "/" + (self.file + "_controller.py")))
+           print "Linking: "  + module + "_controller.py"
+           os.system("ln -s " + os.path.abspath(cwd + "/" + (module + "_controller.py")))
 
            os.chdir(cwd)
-           print "All done! you can use " + self.file + " as a Oneline module now"
+           print "All done! you can use " + module + " as a Oneline module now"
 
         if 'initstream' in dir(self):
             f = open(os.path.abspath(self.initstream), "w+")
@@ -198,7 +233,7 @@ class Runtime(object):
             print "Linked a new stream successfully!"
             print "Use like: stream://{0}".format(self.initstream)
 
-        if self.type == 'CLIENT':
+        if self.get_type() == 'CLIENT':
             if 'init' in dir(self):
                 print os.getcwd()
                 """ initialize a new module """
@@ -219,7 +254,26 @@ class Runtime(object):
                 confpath = "/usr/local/oneline/conf/"
                 modpath = "/usr/local/oneline/modules/"
                 controllerpath = "/usr/local/oneline/controllers/"
+                seedpath = "/usr/local/oneline/seeds/"
                 os.chdir(confpath)
+   
+                if os.path.isfile(path_of_mod +"/" +".oneline.seed"):
+                  print "You already have a module in this directory. Either remove it or choose another directory"
+                  currentseed = open(path_of_mod +"/" + ".oneline.seed", "r").read()
+                  import re 
+                  matches = re.findall("ONELINE_MODULE=(.*)", currentseed)
+                  if matches:
+                    print "Module name is: %s" % (matches[0])
+                  else:
+                    print "Module is corrupt, please remove.."
+
+                seed = open(path_of_mod +"/" + ".oneline.seed", "w+")
+                seed.write("""ONELINE_MODULE={0}""".format(module_name))
+                seed.close()
+                print "Writing seed contents"
+                seeddir = open(seedpath +"/" + module_name,"w+")
+                seeddir.write(path_of_mod)
+
                 f = open(path_of_mod + "/" + module_name + ".conf", "w+")
 
                 print "Linking " + module_name + "'s config..."
@@ -268,26 +322,26 @@ class {0}(ol.module):
                 print "Linking " + module_name + "'s module..."
                 os.system('sudo ln -s {0}/{1}.py > /dev/null 2>&1 &'.format(path_of_mod, module_name))
                 f.close()
-                os.chdir(controllerpath)
-                f =  open(controllerpath +"/" + module_name +  "_controller.py","w+")
+                #os.chdir(controllerpath)
+                f =  open(path_of_mod +"/" + module_name +  "_controller.py","w+")
                 f.write("""
 ## example controller, controls your app           
 import ol
-def my_oneline_init(sql='my.sql', runserver=True):
-  return ol.Controller.start(sql='my.sql', runserver=True)
-def my_oneline_stop(stopserver=True):
-  return ol.Controller.stop(stopserver=True)
-def my_oneline_clean(cleansql=True)
-  return ol.Controller.clean(cleansql=True)
-def my_oneline_restart(restartserver=True)
-  return ol.Controller.restart(restartserver=True)
-
-ol.init = my_oneline_init
-ol.stop = my_oneline_stop
-ol.clean = my_oneline_clean
-ol.restart = my_oneline_restart
-                """)
+def {0}_init(startserver=True,sql='{0}.sql'):
+  print "starting new module named {0}"
+  return ol.controller_init(startserver=startserver,sql=sql)
+def {0}_stop(stopserver=True):
+  print "Stopping server"
+  return ol.controller_stop(stopserver=stopserver)
+def {0}_clean(cleansql=True):
+  print "Cleaning app contents"
+  return ol.controller_clean(cleansql=cleansql)
+def {0}_restart():
+  print "Restarting application"
+  return ol.controller_restart()
+                """.format(module_name,module_name,module_name,module_name,module_name,module_name))
                 f.close()
+                os.chdir(controllerpath)
                 print "Linking "  + module_name + "'s Controller" 
                 os.system("sudo ln -s {0}/{1}_controller.py > /dev/null 2>&1 &".format(path_of_mod, module_name))
 
@@ -338,42 +392,58 @@ ol.restart = my_oneline_restart
                 print "All done! you can now start writing code"
                 #os.system("sudo ln -s " + 
 
-            if 'remove' in dir(self):
-                print "Permantly deleting module {0}".format(self.remove)
+            if self.removeOpt:
+             
+                if not self.remove:    
+                  module = self.get_seed()
+                else:
+                  module = self.remove
+                moddir =self.get_mod_dir(module)
+              
+                print "Permantly deleting module {0}".format(module)
 
                 try: 
-                    os.remove(self.remove + '.py')  
-                    os.remove(self.remove + '.conf')    
-                    os.remove(self.remove + '.html')    
+                    os.remove(moddir + "/" + module + '.py')  
+                    os.remove(moddir + "/"  + module + '.conf')    
+                    os.remove(moddir + "/" + module + '.html')    
+                    os.remove(moddir + "/" + module  + "_controller.py")
+                    os.remove(moddir +"/"  +".oneline.seed")
+                    os.remove(moddir + "/" + "oneline.min.js")
 
-                    os.remove("/usr/local/oneline/modules/" + self.remove + '.py')
-                    os.remove("/usr/local/oneline/conf/" + self.remove + '.conf')
-                    print "Done all files for: {0} module have been removed".format(self.remove)
+                    os.remove("/usr/local/oneline/modules/" + module + '.py')
+                    os.remove("/usr/local/oneline/conf/" + module  + '.conf')
+                    print "Done all files for: {0} module have been removed".format(module)
                 except:
                     print "One or more files could not be deleted.. please make sure the files are on path.."
-            if 'controller' in dir(self):
-             
-                print "trying to " + self.controller
+            if self.controllerOpt:
+                if self.controller:
+                  module = self.controller
+                else:
+                  module = self.get_seed() 
 
                 sys.path.append("/usr/local/oneline/controllers/")
-                module = __import__(self.controller+"_controller")
+                moduleFile = __import__(module + "_controller")
 
-                fn = getattr(module, self.controller +"_" + self.controllerAction)
+                fn = getattr(moduleFile, module +"_" + self.controllerAction)
                 if fn:
                   status = fn()
-                  _OL_CURRENT_APP = self.controller
+                  _OL_CURRENT_APP = module
                   if status:
-                    print self.controller + " was " + self.controllerAction + " !"
+                    print module + " was " + self.controllerAction + " !"
                   else:
                     print "Could not " + self.controllerAction
                 else:
-                  print " You have not implemented : " + self.controller + "_" + self.controllerAction
+                  print "You have either not implemented this or it is not a valid controller function.. " + " please use: " + self.controlleractions.join(",")
           
  
             if 'info' in dir(self):
-                print "Info for module: {0}".format(self.info)
+                if self.info:
+                  module = self.info
+                else:
+                  module =self.get_seed()
+                print "Info for module: {0}".format(module)
                 print "-------------------------------------------"
-                f = open("/usr/local/oneline/modules/" + self.info + ".py").read()
+                f = open("/usr/local/oneline/modules/" + module + ".py").read()
 
                 p = re.findall(r"package(.*)", f)
                 if len(p) > 0:
@@ -394,11 +464,11 @@ ol.restart = my_oneline_restart
         if 'forward' in dir(self):
           from oneline import forward
 
-        if self.type == 'SERVER':
+        if self.get_type() == 'SERVER':
             if 'start' in dir(self):
                 """ start as daemon or regular? """
-                os.system("oneline-server --start_forwarder > /dev/null 2>&1 &")
-                #os.system("oneline-server --start_server")
+                os.system("oneline --start_forwarder > /dev/null 2>&1 &")
+                #os.system("oneline --start_server")
                 status = ol.server(self.ip,int(self.port)).start()
                 self.status = status
                 """ start the forwarder as well """
@@ -487,9 +557,9 @@ init-stream      Link a stream to the home of streams (makes it accessible via: 
 -p, --pack       Pack an existant module for use in oneline
 --controller Control your oneline application
     options:
-      oneline-client --controller stop
-      oneline-client --controller start
-      oneline-client --controller restart
+      oneline --controller stop
+      oneline --controller start
+      oneline --controller restart
 
 
 
@@ -507,15 +577,15 @@ UI SPECIFIC
 """
 
 def restartserver():
-    runtime = Runtime(['--restart'])
+    runtime = Runtime(['olcli.py', '--restart'])
     return runtime.status
     
 def startserver():
-    runtime =Runtime(['--start_server'])
+    runtime =Runtime(['olcli.py','--start_server'])
     return runtime.status
   
 def stop():
-    runtime = Runtime(['--stop'])
+    runtime = Runtime(['olcli.py','--stop'])
     return runtime.status
 
 
