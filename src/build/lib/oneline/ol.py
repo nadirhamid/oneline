@@ -821,8 +821,6 @@ class module(WebSocket):
 
         """  bind the basics """
         self.db = db() 
-        self.config = scan_config(caller_name())
-
         if 'start' in dir(self):
             return self.start()
 
