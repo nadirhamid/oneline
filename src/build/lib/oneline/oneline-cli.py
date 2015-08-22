@@ -326,7 +326,7 @@ class {0}(ol.module):
             if 'start' in dir(self):
                 """ start as daemon or regular? """
                 os.system("oneline-server --start_server > /dev/null 2>&1 &")
-                os.system("oneline-server --start_forwarder > /dev/null 2&1 &")
+                os.system("oneline-server --start_forwarder > /dev/null 2>&1 &")
                 #ol.server(self.ip,int(self.port)).start()
                 """ start the forwarder as well """
                 #from oneline import forward

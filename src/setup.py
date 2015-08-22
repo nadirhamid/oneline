@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-
+# -*- coding: utf-8 -*- 
 #########################################################################
 ## Oneline baseline setup this install all the dependancies for
 ## the project. To run in conjection with
@@ -51,7 +50,7 @@ setup(name="oneline",
       download_url = "https://pypi.python.org/pypi/",
       license="MIT",
       long_description="",
-      packages=["oneline"],
+      packages=["oneline"], 
       classifiers=[
           'Development Status :: 5 - Production/Stable',
           'Framework :: CherryPy',
@@ -93,7 +92,19 @@ os.chdir(fpath)
 
 ## remove any older
 ## version
-os.system("rm -rf "  + fpath +"/oneline*.py")
+toremove =[
+      "ol.py",
+      "olcli.py",
+      "oneline-updater.py",
+      "onelined",
+      "dal.py",
+      "odict.py",
+      "oneline" 
+]
+for i in toremove:
+  if os.path.isfile(fpath + i):
+    os.remove(fpath + i)
+#os.system("rm -rf "  + fpath +"/oneline*.py")
 os.system('sudo ln -s ' + path + "/oneline/ol.py > /dev/null 2>&1 &")
 os.system('sudo ln -s ' + path + "/oneline/dal.py > /dev/null 2>&1 &")
 os.system('sudo ln -s ' + path + "/oneline/odict.py > /dev/null 2>&1 &")

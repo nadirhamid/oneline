@@ -1,11 +1,10 @@
+from oneline import ol 
 import sys 
 import os
 import shutil
 import re
 import cherrypy
 import psutil
-from oneline import ol
-import imp
 
 statusTrans = {
     psutil.STATUS_DEAD: "Dead",
@@ -35,7 +34,7 @@ class Runtime(object):
         self.removeOpt = False
         self.port = 9000 
         self.ip = "127.0.0.1"
-        self.serveropts = ['start', 'stop', 'restart', 'start_server', 'stop_server', 'start_forwarder']
+        self.serveropts = ['start', 'stop', 'restart', 'start_server', 'stop_server', 'start_forwarder', 'use_ssl', 'ip', 'port']
         self.clientopts =['init', 'pack', 'remove', 'controller','list']
         self.controlleractions =['init', 'restart','stop', 'clean']
         a = self.args
@@ -81,6 +80,8 @@ class Runtime(object):
                 self.forward = True
             if i in ['--start_server']:
                 self.start_server = True
+            if i in ['--ssl', '-use-ssl']:
+                self.use_ssl = True
             if i in ['--start_forwarder']:
                 self.start_forward = True
             if i in ['-i', '--ip']:
@@ -139,9 +140,25 @@ class Runtime(object):
         file =open("/usr/local/oneline/seeds/" +modulename).read()
         return file
       return False
-      
+    
+    def get_main_config(self):  
+      #open("/usr/local/oneline/conf/Main.conf","r")
+      config = ol.scan_config("Main.conf")
+      return config
+
     def perform(self):
         global statusTrans
+        config = self.get_main_config()
+        use_ssl = False
+        if 'use_ssl' in config.keys():
+          if config['use_ssl'] == "yes":
+            use_ssl=True
+        if 'ssl' in dir(self):
+          use_ssl = True
+
+        if use_ssl:
+          cherrypy.log("Using SSL: " + "Yes" if use_ssl else "No")
+
         if 'settings' in dir(self):
             print "Loading default settings"
             if os.path.isfile("/usr/local/oneline/conf/{0}.conf".format(self.settings)):
@@ -469,14 +486,14 @@ def {0}_restart():
                 """ start as daemon or regular? """
                 os.system("oneline --start_forwarder > /dev/null 2>&1 &")
                 #os.system("oneline --start_server")
-                status = ol.server(self.ip,int(self.port)).start()
+                status = ol.server(self.ip,int(self.port),use_ssl).start()
                 self.status = status
                 """ start the forwarder as well """
                 #from oneline import forward
                 #start_forwarder(self.ip, (self.port + 1))
             if 'start_server' in dir(self):
                 print "Starting oneline-websockets on port, ip: " + str(self.port) + ", " + self.ip
-                self.status = ol.server(self.ip, int(self.port)).start()
+                self.status = ol.server(self.ip, int(self.port),use_ssl).start()
                  
             if 'start_forward' in dir(self): 
                 print "Starting oneline-xhr forwarder on port, ip: " + str(self.port+1) + ", " + self.ip
@@ -520,7 +537,7 @@ def {0}_restart():
                 os.system("pkill -f 'python /usr/bin/olcli.py'")
                 os.system("pkill -f '/usr/bin/python /usr/bin/olcli.py'")
                 time.sleep(1)
-                self.status = ol.server(self.ip, int(self.port)).start()
+                self.status = ol.server(self.ip, int(self.port,use_ssl)).start()
 
                 quit()
  
@@ -571,6 +588,7 @@ SERVER SPECIFIC
 -st, --status   Is the server running or stopped
 -ip, --ip       Add custom ip to init
 -port, --port   Add custom port to init
+-use-ssl, --ssl Use websockets wss over ws (RECOMMENDED)  
 
 UI SPECIFIC
 --init-ui      starts the oneline ui at the default port

@@ -58,14 +58,16 @@
       Oneline.host = options.host || Oneline.host;
       Oneline.type = options.type === 'bind' ? 'bind' : 'auto';
       Oneline.on = options.on || 'click';
+      Oneline.usessl  = options.usessl  || false;
       Oneline.target = options.target;
+      Oneline.protocol = Oneline.usessl ? "wss://": "ws://";
 
       options.server = options.module || options.server;
 
       if (options.server.match(/ws\:\/\//))
         Oneline.settings.server = options.server;
       else
-        Oneline.settings.server = options.server = 'ws://' + Oneline.host + ':' + Oneline.port + '/' + options.server;
+        Oneline.settings.server = options.server = Oneline.protocol + Oneline.host + ':' + Oneline.port + '/' + options.server;
 
       if (OnelineTransport.WebSockets.detect()) {
       Oneline.socket = OnelineTransport.WebSockets.Ctor(Oneline.settings.server);

@@ -33,7 +33,7 @@ from ws4py.messaging import TextMessage
 
 DEFAULTS = dict(host='127.0.0.1', port=9000, path=os.path.abspath(os.path.join(os.path.dirname(__file__), 'static')))
 SETTINGS = dict(table='', agent=[], nodes=[])
-SERVERS = dict(host='server.socket_host', port='server.socket_port', path='tools.staticdir.root')
+SERVERS = dict(host='server.socket_host', port='server.socket_port', path='tools.staticdir.root', ssl_key='server.ssl_private_key', ssl_certificate='server.ssl_certificate')
 TABLE = ''
 MODULES = []
 _OL_SERVER = {}
@@ -511,10 +511,28 @@ class server(object):
         self.path = path 
         self.ssl = False
 
-        cherrypy.config.update({SERVERS['host']: self.host,
+        if 'use_ssl' in config.keys():
+          if config['use_ssl']:
+            if 'ssl_key' in config.keys() and 'ssl_certificate' in config.keys():
+              print "Using SSL support with SSLKey: "  +config['ssl_key'] + ", SSLCertificate: " + config['ssl_certificate']
+              self.ssl = True
+              cherrypy.config.update({
+                    SERVERS['host']: self.host,
+                    SERVERS['port']: self.port,
+                    SERVERS['path']: self.path
+                    #SERVERS['ssl_key']: unicode(config['ssl_key']),
+                    #SERVERS['ssl_certificate']: unicode(config['ssl_certificate'])
+              })
+              #cherrypy.server.ssl_module = 'builtin'
+              cherrypy.server.ssl_private_key = unicode(config['ssl_key'])
+              cherrypy.server.ssl_certificate = unicode(config['ssl_certificate'])
+            else:
+              cherrypy.log("If you want to use SSL and WSS please specifiy 'ssl_certificate' and 'ssl_key' in Main.conf")
+              exit(1)
+        else:
+          cherrypy.config.update({SERVERS['host']: self.host,
                         SERVERS['port']: self.port,
                     SERVERS['path']: path}) 
-
         if os.path.exists('/usr/local/oneline/socket/'):
             piddir = '/usr/local/oneline/socket/'
 
@@ -587,7 +605,7 @@ class server(object):
         cherrypy.config.update({ 'request.modules_md5_snapshot': hashlib.md5(salt).hexdigest() })
 
         _OL_SERVER = _server(self.host, self.port, self.ssl)
-        cherrypy.quickstart(_OL_SERVER, '', config=config)  
+        cherrypy.quickstart(_OL_SERVER, DEFAULTS['path'], config=config)  
         ## return a start by default
         ## if cherrypy errors it will on its
         ## own thread

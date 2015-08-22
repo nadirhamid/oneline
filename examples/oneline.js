@@ -44,6 +44,7 @@
   Oneline.host = Oneline.host || 'localhost';
   Oneline.port = Oneline.port || 9000;
   Oneline.protoline = Oneline.protoline || [];
+  Oneline.objects = Oneline.objects || [];
   Oneline.loaded = 0;
 
   /* setup online with the 
@@ -66,11 +67,29 @@
       else
         Oneline.settings.server = options.server = 'ws://' + Oneline.host + ':' + Oneline.port + '/' + options.server;
 
-      Oneline.socket = window.WebSocket ? new window.WebSocket(options.server) : MozWebSocket(options.server); 
+      if (OnelineTransport.WebSockets.detect()) {
+      Oneline.socket = OnelineTransport.WebSockets.Ctor(Oneline.settings.server);
+      } else {
+      //  fallback
+      // to xhr
+        if (OnelineTransport.XHR.detect()) {
+          Oneline.settings.xhrurl = "http://" + Oneline.host + ":" + ((parseInt(Oneline.port) + 1)).toString();
+          Oneline.socket = OnelineTransport.XHR.Ctor(Oneline.settings.xhrurl, Oneline.settings.server);
+          Oneline.loaded = true;
+        } else {
+          // todo other transportation
+          console.log("Neither XHR or WebSocket transport is available in this browser");
+        }
+      }
       Oneline.interop = typeof options.interop !== 'undefined' ? options.interop === 'json' ? JSON : BSON : BSON;
       Oneline.freq = typeof options.freq !== 'undefined' ? options.freq : Oneline.freq;
       Oneline.socket.onopen = function() { Oneline.loaded = 1; };       
       Oneline.socket.onmessage = function(evt) { console.log(O.interop.parse(evt.data)); };
+      if (typeof options.order !== 'undefined') {
+        Oneline.order = options.order;
+      } else {
+        Oneline.order = [];
+      }
 
       /* onclose try to reestablish
        * the connection
@@ -81,9 +100,52 @@
         */
       Oneline.target = document.getElementById(Oneline.target);
 
-      console.log(Oneline.target);
   };
 
+  /**
+   * A list of context based options
+   * this is for when we don't
+   * get user input we will need
+   * to resort to their defaults
+   * this should have settings foreach
+   * object
+   *
+   * TODO: currently we need to support 
+   * all objects in this however every option
+   * does not have a default yet
+   */
+  Oneline.contextOptions = {
+     "geolocation": {
+        "limit": {
+          "default": 512
+        },
+        "range": {
+          "default": 40.00
+        },
+        "bidirectional": {
+          "default": false
+        }
+     }
+  };
+  /**
+   * fetch an optional
+   * thing when we don't receive it
+   * return 0, when we have it 
+   * check our lookup array and do 
+   * something
+   * 
+   * @param module:  module to look in
+   * @param option: specified option
+   * 
+   * @method
+   */
+  Oneline.fetchOptional = function(mod, option, value) {
+     if (typeof value === 'undefined') {
+        return Oneline.contextOptions[mod][option]['default'];
+     }
+
+     return option;
+  };
   /* agent object for oneline
    * @class
    */
@@ -119,11 +181,40 @@
       return { 'start': 0000, 'end': 3600 };
   };
 
+  /** simple echo module
+   * output all data in desired db table
+   */
+  Oneline.echo = Oneline.echo = function(options, ready) {
+    Oneline.echo.options = options;
+    if (!ready)
+    Oneline.objects.push(
+            clone(Oneline.echo(options, 1))
+    );
+    return {
+        /**
+         * run the echo object
+         * this will only look
+         * at the table do nothing else
+         */
+        run: function(m) {
+            this.m = m || {};
+            this.m.echo = {};
+            this.m.echo.limit = O.echo.options.limit;
+            this.state = 1;
+        }
+    }
+  };
+
   /* geolocation module
    * @class
    */
-  Oneline.geolocation = Oneline.geo = function(options) {
+  Oneline.geolocation = Oneline.geo = function(options, ready) {
       Oneline.geolocation.options = options;
+      if (!ready)
+      Oneline.objects.push(
+            clone(Oneline.geo(options, 1))
+      );
+
 
       return {
 
@@ -140,12 +231,14 @@
               this.state = 0;
               this.m.geo.every = O.geolocation.options.every;
               this.m.geo.range = O.geolocation.options.range;
+              this.m.geo.limit = O.fetchOptional("geolocation", "limit", O.geolocation.options.limit);
               var that = this;
 
               navigator.geolocation.getCurrentPosition(function(res) {
                   that.m.geo.lat = res.coords.longitude;
                   that.m.geo.lng = res.coords.latitude;
                   that.m.geo.range = O.geolocation.options.range;
+                  that.m.geo.limit = O.geolocation.options.limit;
                   that.state = 1;
               });
           }
@@ -155,9 +248,12 @@
   /* event module
    * @class
    */
-  Oneline.event = function(options) {
+  Oneline.event = function(options, ready) {
       Oneline.event.options = options;
-
+      if (!ready)
+        Oneline.objects.push(
+            clone(Oneline.event(options, 1))
+        );
       return {
 
           /* event object does not
@@ -175,11 +271,61 @@
   };
 
 
+  /**
+   * oneline generic
+   * class. These just
+   * tell oneline to not use oneline
+   * pipelining and stick to the module's
+   * code.
+   * @class
+   */
+  Oneline.generic = function(options, ready) {
+    Oneline.generic.options = options;
+    if (!ready)
+      Oneline.objects.push(
+          clone(Oneline.generic(options, 1))
+      );
+
+      return {
+
+        /**
+         * run the generic. These just provide
+         * two parameters: type
+         * that will tell what needs to be done
+         * and data:
+         * other stuff
+         *
+         * Oneline.generic({
+              'type': 'call' 
+           });
+         * Oneline.generic({
+              'type': 'do_something'
+              'data': []
+           });
+         */
+        run: function(m) 
+        {
+          this.m = m || {};
+          this.m.generic = {};
+          this.m.generic.type = Oneline.generic.options.type;
+          this.m.generic.data = Oneline.generic.options.data;
+          this.state = 1;
+
+          console.log(this);
+        }
+      }
+  };
+
+
   /* time module
    * @class
    */
    Oneline.time = function(options) {
       Oneline.time.options = options;
+      if (!ready)
+        Oneline.objects.push(
+            clone(Oneline.time(options, 1))
+        );
 
       return {
 
@@ -201,6 +347,10 @@
     */
    Oneline.random = function(options) {
       Oneline.random.options = options;
+      if (!ready)
+        Oneline.objects.push(
+            clone(Oneline.random(options, 1))
+        );
 
       return {
           run: function(m) 
@@ -219,18 +369,25 @@
    * @class
    */
   Oneline.pipeline = function(agent, objects, callback) {
-      O.objects = objects;
-      O.callback = callback;
+      if (typeof agent !== 'undefined' && typeof agent !== 'function')
+        O.agent = agent;
+      else
+        O.agent = {};
+      if (typeof objects !== 'undefined' && typeof objects !== 'function')
+        O.objects = objects;
+
+
+      
+      O.callback = arguments[arguments.length - 1];
+
       O.protoline.push(this);
       O.linetype = Oneline.type;
       O.provider = O.linetype === 'bind' ? 'Timeout' : 'Interval';
       O.runner = 'Interval';
-
       if (Oneline.type === 'bind')
           if (typeof Oneline.target !== 'undefined' && Oneline.target.tagName)
                 Oneline.target['on' + Oneline.on] = 
                    function() { return Oneline.pipeline(agent, O.objects, O.callback).run(); }
-
       return {
 
           /* stop the oneline streaming
@@ -273,7 +430,6 @@
                    */
                   for (var i in O.objects) {
                       O.objects[parseInt(i)].run(m);
-
                       O.oot = window['set' + O.runner](function() {
 
                           /* check if the prev
@@ -304,9 +460,11 @@
                            * add it to the message
                            */
                           t = new Date().getTime();
+                          m_.packet.order = O.order;
                           m_.packet.timestamp = t; 
                           m_.packet.interop = O.interop;
                           m_.uuid = O.uuid();
+
 
                           O.socket.send(O.interop.stringify(m_));
 
@@ -390,14 +548,14 @@
 
   /* generate a uid not more than
    * 1, 000, 000. This code was 'borrowed' from 'KennyTM'
-   * @ http://stackoverflow.com/questions/6248666/how-to-generate-short-uid-like-ax4j9z-in-js
+   * @ http://stackoverflow.com/questions/624*666/how-to-generate-short-uid-like-ax4j9z-in-js
    */
   Oneline.uuid = function() 
   {
       return ("0000" + (Math.random()*Math.pow(36,4) << 0).toString(36)).slice(-4)
   };
 
-  /* convert a uint8 array to a string
+  /* convert a uint* array to a string
    * useful for bson interchange
    *
    */
@@ -411,9 +569,9 @@
       return o;
   };
 
-  /* opposite of uint8tostring
+  /* opposite of uint*tostring
    * this assumes the given string is already
-   * in uint8 format
+   * in uint* format
    */
   Oneline.stringToUint8 = function(str)
   {
@@ -445,3 +603,94 @@
   window.O = window.ol = Oneline;
 
 }).call(this);
+
+
+
+/**
+ * Deep copy an object (make copies of all its object properties, sub-properties, etc.)
+ * An improved version of http://keithdevens.com/weblog/archive/2007/Jun/07/javascript.clone
+ * that doesn't break if the constructor has required parameters
+ * 
+ * It also borrows some code from http://stackoverflow.com/a/11621004/560114
+ */ 
+function clone(src, /* INTERNAL */ _visited) {
+    if(src == null || typeof(src) !== 'object'){
+        return src;
+    }
+
+    // Initialize the visited objects array if needed
+    // This is used to detect cyclic references
+    if (_visited == undefined){
+        _visited = [];
+    }
+    // Otherwise, ensure src has not already been visited
+    else {
+        var i, len = _visited.length;
+        for (i = 0; i < len; i++) {
+            // If src was already visited, don't try to copy it, just return the reference
+            if (src === _visited[i]) {
+                return src;
+            }
+        }
+    }
+
+    // Add this object to the visited array
+    _visited.push(src);
+
+    //Honor native/custom clone methods
+    if(typeof src.clone == 'function'){
+        return src.clone(true);
+    }
+
+    //Special cases:
+    //Array
+    if (Object.prototype.toString.call(src) == '[object Array]') {
+        //[].slice(0) would soft clone
+        ret = src.slice();
+        var i = ret.length;
+        while (i--){
+            ret[i] = clone(ret[i], _visited);
+        }
+        return ret;
+    }
+    //Date
+    if (src instanceof Date){
+        return new Date(src.getTime());
+    }
+    //RegExp
+    if(src instanceof RegExp){
+        return new RegExp(src);
+    }
+    //DOM Elements
+    if(src.nodeType && typeof src.cloneNode == 'function'){
+        return src.cloneNode(true);
+    }
+
+    //If we've reached here, we have a regular object, array, or function
+
+    //make sure the returned object has the same prototype as the original
+    var proto = (Object.getPrototypeOf ? Object.getPrototypeOf(src): src.__proto__);
+    if (!proto) {
+        proto = src.constructor.prototype; //this line would probably only be reached by very old browsers 
+    }
+    var ret = object_create(proto);
+
+    for(var key in src){
+        //Note: this does NOT preserve ES5 property attributes like 'writable', 'enumerable', etc.
+        //For an example of how this could be modified to do so, see the singleMixin() function
+        ret[key] = clone(src[key], _visited);
+    }
+    return ret;
+}
+
+//If Object.create isn't already defined, we just do the simple shim, without the second argument,
+//since that's all we need here
+var object_create = Object.create;
+if (typeof object_create !== 'function') {
+    object_create = function(o) {
+        function F() {}
+        F.prototype = o;
+        return new F();
+    };
+}
+

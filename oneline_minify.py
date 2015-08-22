@@ -1,12 +1,11 @@
-from slimit.minifier import minify
-
+from jsmin import jsmin
 noticeOfCopyright = open("./js/copyright_tag", "r").read()
 
 files = ['./js/bson.js', './js/transport.js', './js/oneline.js']
 minifiedString = ""
 for i in files:
   thisFileContents = open(i, "r").read()
-  minified = minify(thisFileContents, mangle=True, mangle_toplevel=True) 
+  minified = jsmin(thisFileContents, quote_chars=r"'`\"")
   minifiedString += minified
 
 
