@@ -425,7 +425,7 @@ class _server(object):
     def __init__(self, host, port, ssl=False):
         self.host = host
         self.port = port
-        self.scheme = 'wss' if ssl else 'ws'
+        self.scheme = 'ws' if not ssl else 'wss'
         self.propagated_modules = []
 
     """
@@ -532,12 +532,14 @@ class server(object):
         else:
           cherrypy.config.update({SERVERS['host']: self.host,
                         SERVERS['port']: self.port,
+
                     SERVERS['path']: path}) 
         if os.path.exists('/usr/local/oneline/socket/'):
             piddir = '/usr/local/oneline/socket/'
 
         plugin(cherrypy.engine).subscribe()
         cherrypy.process.plugins.PIDFile(cherrypy.engine, piddir + 'oneline.pid.txt').subscribe()
+
         cherrypy.tools.websocket = WebSocketTool()
 
     def start(self):
@@ -586,7 +588,7 @@ class server(object):
                                             'request.module_logger': logger(module_name),
                                             'request.module_uuid': uuid.uuid4().__str__(),
                                             'tools.websocket.handler_cls': classOfModule }
-               
+
 
               MODULES.append(module_name)
               ## do storage to create the tables needed
@@ -605,7 +607,7 @@ class server(object):
         cherrypy.config.update({ 'request.modules_md5_snapshot': hashlib.md5(salt).hexdigest() })
 
         _OL_SERVER = _server(self.host, self.port, self.ssl)
-        cherrypy.quickstart(_OL_SERVER, DEFAULTS['path'], config=config)  
+        cherrypy.quickstart(_OL_SERVER, "/", config=config)  
         ## return a start by default
         ## if cherrypy errors it will on its
         ## own thread
@@ -685,8 +687,8 @@ class storage(object):
           logger = None
 
         db_type = config['db_type']
-        db_user = config['db_user']
-        db_pass = config['db_pass']
+        username= config['db_user'] if 'db_user' in config.keys() else username
+        password =config['db_pass'] if 'db_pass' in config.keys() else password
         db_table = config['db_table']
         database =config['db_database']
         db_host =config['db_host']
@@ -706,9 +708,9 @@ class storage(object):
             _OL_DB = self.db = DAL('sqlite://' + database + '.db', migrate_enabled=False, folder=dbfolder, auto_import=True)    
         else:   
             if silent:
-              _OL_DB = self.db = DAL(db_type + '://' + username + ':' + password + '@' + host + '/' + database)
+              _OL_DB = self.db = DAL(db_type + '://' + username + ':' + password + '@' + db_host + '/' + database)
             else:
-              _OL_DB = self.db = DAL(db_type + '://' + username + ':' + password + '@' + host + '/' + database, migrate_enabled=False)
+              _OL_DB = self.db = DAL(db_type + '://' + username + ':' + password + '@' + db_host + '/' + database, migrate_enabled=False)
 
         
         if silent:

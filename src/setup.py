@@ -7,7 +7,7 @@
 ## This scaffolding model makes your app work on Google App Engine too
 ## File is released under public domain and you can use without limitations
 #########################################################################
-
+#import
 import os, os.path
 from glob import iglob
 import sys
@@ -102,7 +102,7 @@ toremove =[
       "oneline" 
 ]
 for i in toremove:
-  if os.path.isfile(fpath + i):
+  if os.path.islink(fpath + i):
     os.remove(fpath + i)
 #os.system("rm -rf "  + fpath +"/oneline*.py")
 os.system('sudo ln -s ' + path + "/oneline/ol.py > /dev/null 2>&1 &")

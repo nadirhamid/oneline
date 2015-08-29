@@ -4,6 +4,7 @@ oneline/__init__.py
 oneline/core.py
 oneline/dal.py
 oneline/forward.py
+oneline/init.py
 oneline/odict.py
 oneline/ol.py
 oneline/olcli.py

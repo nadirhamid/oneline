@@ -44,6 +44,8 @@
   Oneline.host = Oneline.host || 'localhost';
   Oneline.port = Oneline.port || 9000;
   Oneline.protoline = Oneline.protoline || [];
+  Oneline.connection_uuid = "";
+  Oneline.lastResponse = "";
   Oneline.objects = Oneline.objects || [];
   Oneline.loaded = 0;
 
@@ -59,6 +61,7 @@
       Oneline.type = options.type === 'bind' ? 'bind' : 'auto';
       Oneline.on = options.on || 'click';
       Oneline.usessl  = options.usessl  || false;
+      Oneline.connection_uuid = Oneline.uuid();
       Oneline.target = options.target;
       Oneline.protocol = Oneline.usessl ? "wss://": "ws://";
 
@@ -148,6 +151,15 @@
 
      return option;
   };
+
+  Oneline.isMe = function(message) {
+    if (message.connection_uuid === O.connection_uuid) {
+      return true;
+    }
+    return false;
+  };
+  
+
   /* agent object for oneline
    * @class
    */
@@ -466,6 +478,8 @@
                           m_.packet.timestamp = t; 
                           m_.packet.interop = O.interop;
                           m_.uuid = O.uuid();
+                          m_.connection_uuid = O.connection_uuid;
+                          m_.timestamp =new Date().getTime();
 
 
                           O.socket.send(O.interop.stringify(m_));
