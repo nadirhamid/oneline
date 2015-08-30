@@ -143,9 +143,10 @@ def scan_config(caller):
     file = open("/usr/local/oneline/conf/"+ config_file).read()
     lines = file.split("\n")
     for i in lines:
-      match = re.findall(keyword, i)
-      if match:
-        config[match[0][0]] = match[0][1]
+      if not re.findall("^#", i):
+        match = re.findall(keyword, i)
+        if match:
+          config[match[0][0]] = match[0][1]
       
     return config
 
@@ -1161,12 +1162,12 @@ class logger(object):
 
         file_name = module_name + '_' + datestamp + '.log'
 
-        if os.path.isfile(file_name):
-            self.file_name = file_name
+        if os.path.isfile(self.prefix + file_name):
+            self.file_name = self.prefix  +file_name
         else:
-            f = open(file_name, 'w+')
+            f = open(self.prefix  + file_name, 'w+')
             f.close()
-            self.file_name = file_name
+            self.file_name = self.prefix  +file_name
 
         os.chdir(curr)
 
