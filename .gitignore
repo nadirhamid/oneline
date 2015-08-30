@@ -1,5 +1,8 @@
 modules/*.pyc
+modules/*.py
+modules/*.conf
 modules/*.log
+!modules/Example_module.py
 !modules/README
 
 logs/*.log
