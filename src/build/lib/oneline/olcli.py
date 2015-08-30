@@ -517,14 +517,20 @@ def {0}_restart():
             if 'restart' in dir(self):
                 """ TODO add graceful shutdown """
                 print "Stopping server.."
-                os.system("pkill -f 'python /usr/bin/olcli.py'")
-                os.system("pkill -f '/usr/bin/python /usr/bin/olcli.py'")
-                time.sleep(1)
-                self.status = ol.server(self.ip, int(self.port)).start()
+                #os.system("pkill -f 'python /usr/bin/olcli.py'")
+                #os.system("pkill -f '/usr/bin/python /usr/bin/olcli.py'")
+                #os.system("oneline --start")
+                r1 = Runtime(['olcli.py', '--stop'])
 
-                quit()
+                print "Starting server"
+                r2 = Runtime(['olcli.py', '--start'])
+                self.status = r2.status
+                #time.sleep(1)
+                #self.status = ol.server(self.ip, int(self.port)).start()
+
+                #quit()
  
-                exit()
+                #exit()
             if 'graceful' in dir(self):
                 print "Stopping Oneline server"
                 os.system("pkill -f 'python ./ol.py --server'")

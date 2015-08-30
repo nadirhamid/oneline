@@ -39,6 +39,8 @@ MODULES = []
 _OL_SERVER = {}
 _OL_DB = []
 _OL_DBS = []
+_OL_TABLES = []
+
 _OL_AGENT = {}
 _OL_TABLE = '' ## the used table
 _OL_CURRENT_APP = "" ## used by the cli
@@ -124,8 +126,7 @@ def caller_name(skip=2):
 
 """
 scan the whole config aside from the
-database settings.
-"""
+database settings.  """
 def scan_config(caller):
 
     config = dict()
@@ -331,6 +332,16 @@ def pack(message, resp=None):
   return pack_message(message)
 
 
+def  tables():
+  global _OL_TABLES
+  return _OL_TABLES
+
+#def clean_db():
+#  global _OL_DB
+#  global _OL_TABLES
+#  _OL_DB =None
+#  _OL_TABLES = []
+
 def controller_init(sql='',startserver=False, name=''):
   global _OL_CURRENT_APP 
   from oneline import olcli
@@ -376,37 +387,40 @@ def allwhitespace(str):
 
 def controller_stop(stopserver=True):
   from oneline import olcli
-  if stopserer: 
+  if stopserver: 
     cli.stopserver()
 
 def controller_clean(cleansql=False):
   global _OL_CURRENT_APP
    
   caller= caller_name()
-  m = re.findall("\.(.*)", caller)
+  m = re.findall("\.(.*)_clean", caller)
   if m:
     caller = m[0]
-    absolute =  re.sub("_clean","", caller)
- 
-    db = storage(absolute + ".conf")
+    absolute =  re.sub("_clean","", caller) 
+      
+    db = storage(conf=absolute + ".conf")
     print "Cleaning tables for application: " + absolute
     if cleansql:
       try:
         realdb = db.get()['db']
-        tables = db.get()['tables']
-        for i in tables:
+         
+        to_tables = tables()
+        for i in to_tables:
+          print "Attempting to clean: {0}".format(i)
           rows = realdb(getattr(realdb, i)).select() 
           for j in rows:
-            j.delete()
-        return True
+            realdb(getattr(getattr(realdb,i), 'id') == j.id).delete()
+            realdb.commit()
       except:
         raise Exception("Was not able to clean the database")
+      return True
 
       
 
 def controller_restart():
   from  oneline import olcli
-  ol.restartserver()
+  olcli.restartserver()
  
 
 def db():
@@ -442,6 +456,23 @@ class _server(object):
             print 'ONELINE: request module ' + _vpath + ' was not recognized'
 
 
+    def index(self): 
+        import pkg_resources
+        version = pkg_resources.get_distribution("oneline").version
+        return """
+            <!DOCTYPE HTML>
+                <html>
+                      <head>
+                          <title> Oneline HomePage</title>
+                          </head>
+                      <body>
+                        <h2>Hello if you see this you have successfully setup oneline {0}</h2>
+                      </body>
+                    </html>
+              """.format(version)
+
+
+      
     def _make_new(self, name):
         setattr(self, name, proto_)
 
@@ -674,8 +705,8 @@ class storage(object):
         ## we should not use the storage object
         ## TODO:
         ## provide a mock function  
-        if not 'db_table' in config.keys():
-          return None
+        #if not 'db_table' in config.keys():
+        #  return None
             
         
 
@@ -692,7 +723,7 @@ class storage(object):
         db_table = config['db_table']
         database =config['db_database']
         db_host =config['db_host']
-        self.table =table =config['db_table']        
+        self.table =table = config['db_table']        
         if 'join_table' in config.keys():
           join_table =config['join_table']
 
@@ -745,7 +776,7 @@ class storage(object):
 
             args = []
             args.append(table_name)
-
+            _OL_TABLES.append(table_name)
             if db_type in ['mysql']:
                 schema = self.db.executesql('explain ' + i[0])
   
@@ -807,6 +838,7 @@ class storage(object):
                   self.db.define_table(*args)
 
         self.db.commit()
+
         _OL_TABLE = table
         _OL_DB = self.db
         

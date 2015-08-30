@@ -102,8 +102,11 @@ toremove =[
       "oneline" 
 ]
 for i in toremove:
-  if os.path.islink(fpath + i):
-    os.remove(fpath + i)
+  if os.path.isfile(fpath + i):
+    try:
+      os.remove(fpath + i)
+    except:
+      raise Exception("Could not delete old file")
 #os.system("rm -rf "  + fpath +"/oneline*.py")
 os.system('sudo ln -s ' + path + "/oneline/ol.py > /dev/null 2>&1 &")
 os.system('sudo ln -s ' + path + "/oneline/dal.py > /dev/null 2>&1 &")
