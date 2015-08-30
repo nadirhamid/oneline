@@ -242,6 +242,12 @@ without having websocket support in the target browser
         for a full list of features please view the Controller implementation, in /controllers/Example_controller.py
 
 
+0.8.2
+------------------------------------------------------------
+
+- bug fixes for controllers
+
+
 
 
 
