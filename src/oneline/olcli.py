@@ -486,10 +486,11 @@ def {0}_restart():
             if 'stop' in dir(self):
                 
                 if os.path.isfile("/usr/local/oneline/socket/oneline.pid.txt"):
-                  processId = int(open("/usr/local/oneline/socket/oneline.pid.txt").read())
-                  process = psutil.Process(processId)
-                  process.kill()
                   try:
+                    processId = int(open("/usr/local/oneline/socket/oneline.pid.txt").read())
+                    process = psutil.Process(processId)
+                    process.kill()
+                  #try:
                     time.sleep(3)
                     process = psutil.Process(processId)
                     print "Could not stop Oneline server"
