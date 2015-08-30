@@ -2,6 +2,14 @@
 ------------------------------------------------------
 Features will be purged and moved in this version, several fixes. And last releast of
 Oneline in < 1
+ - add subprocess in place of python os calls
+   move oneline to more cross platform based.
+ - move /usr/local/oneline to platform specific variable,
+  keep things cross platform
+    
+      
+
+
 
 2.0.0 
 ------------------------------------------------------
