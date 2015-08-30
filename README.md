@@ -20,11 +20,16 @@ Before anything you should:
 
 	bootstrap
 	
-this will install oneline and its dependancies
+this will install oneline and its dependancies. It will also start the oneline server if everything goes well.
+To do this seperatly you can use:
+
+  oneline --start
+
+
 
 To make a simple module, do:
 
-	oneline-client --init "my_module"
+	oneline --init "my_module"
 
 This will create the needed files for writing your first oneline module.
 I will return to this after.
