@@ -1,17 +1,19 @@
-/modules/*.pyc
-/modules/*.log
-!/modules/README
+modules/*.pyc
+modules/*.log
+!modules/README
 
-/logs/*.log
-!/logs/README
+logs/*.log
+!logs/README
 
-/conf/*.log 
-/conf/*.py
-!/conf/README
+conf/*.log 
+conf/*.py
+!conf/README
 
-/controllers/*.py
-/controllers/*.pyc
-!/controllers/README
+controllers/*.py
+controllers/*.pyc
+!controllers/README
 
-/seeds/*
-!/seeds/README
+socket/*
+
+seeds/*
+!seeds/README
