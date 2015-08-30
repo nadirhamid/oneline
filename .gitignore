@@ -14,6 +14,7 @@ conf/*.py
 !conf/Main.conf
 !conf/README
 
+!controllers/Example_module_controller.py
 controllers/*.py
 controllers/*.pyc
 !controllers/README
