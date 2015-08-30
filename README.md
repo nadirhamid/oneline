@@ -23,7 +23,7 @@ Before anything you should:
 this will install oneline and its dependancies. It will also start the oneline server if everything goes well.
 To do this seperatly you can use:
 
-  oneline --start
+	oneline --start
 
 
 
