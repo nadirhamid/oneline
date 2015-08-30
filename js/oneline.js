@@ -359,7 +359,7 @@
    /* random module
     * @class
     */
-   Oneline.random = function(options) {
+   Oneline.random = function(options, ready) {
       Oneline.random.options = options;
       if (!ready)
         Oneline.objects.push(

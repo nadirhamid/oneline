@@ -721,7 +721,7 @@ class storage(object):
         db_type = config['db_type']
         username= config['db_user'] if 'db_user' in config.keys() else username
         password =config['db_pass'] if 'db_pass' in config.keys() else password
-        db_table = config['db_table']
+        #table = config['db_table']  if 'db_table' in config.keys() else table
         database =config['db_database']
         db_host =config['db_host']
         self.table =table = config['db_table']        
@@ -838,12 +838,11 @@ class storage(object):
                 else:
                   self.db.define_table(*args)
 
-        self.db.commit()
-
         _OL_TABLE = table
+      
         _OL_DB = self.db
-        
-        self.table = table
+        cherrypy.log("registering the database and table under: %s, %s" % (_OL_DB.__str__(), _OL_TABLE))
+        self.db.commit()
 
 
     """
@@ -1049,21 +1048,21 @@ class pipeline(object):
 
         for i in self._objs:
             try:
-                i.storage = self.storage
-                i.logger = self.logger
+              i.storage = self.storage
+              i.logger = self.logger
 
-                if c == 0:
-                    m = i.run(m)
-                else:
-                    m = i.run(self._append(m, p))
-            except:
-                i.log()
-                c += 1
+              if c == 0:
+                  m = i.run(m)
+              else:
+                  m = i.run(self._append(m, p)) 
+            except Exception, e:
+              i.log()
+              ## main logging routine should be different from the modules, here we will collect the generic errors from python
+              self.logger.append( dict(message=str(e)))
+              #c += 1
 
             c += 1
 
-      
-          
         if len(self._objs) >  0 and len(m) > 0:  
           m = [dict(i.items() + [('confidence', 1)]) for i in m]
 
@@ -1532,7 +1531,9 @@ class random(object):
         amount = int(message['packet']['random']['amount'])
         _OL_DB = self.storage.get()['db']
         _OL_TABLE = self.storage.get()['table']
-
+        cherrypy.log("Entering random module with:")
+        cherrypy.log(message.__str__())
+        cherrypy.log("Database is:%s, table is  %s"  %(_OL_DB.__str__(),_OL_TABLE))
         if not 'data' in message.keys():
             queries = []
             queries.append(getattr(_OL_DB, _OL_TABLE))
@@ -1540,18 +1541,23 @@ class random(object):
             query = reduce(lambda a,b:(a&b),queries)
             rows = _OL_DB(query).select(orderby='<random>', limitby=(0, amount))    
 
+            cherrypy.log("Leaving random module with:")
+            cherrypy.log( rows.as_list().__str__())
             return rows.as_list()
         else:
             found = len(message['data'])
 
-            for i in range(0, amount):
-                sel = _random.randint(0, found)
+            if found > 0:
+              for i in range(0, amount):
+                  sel = _random.randint(0, found - 1)
 
-                if not 'confidence' in message['data'][sel].keys():
-                    message['data'][sel]['confidence'] = 1
-                else:
-                    message['data'][sel]['confidence'] += 1
+                  if not 'confidence' in message['data'][sel].keys():
+                      message['data'][sel]['confidence'] = 1
+                  else:
+                      message['data'][sel]['confidence'] += 1
 
+            cherrypy.log("Leaving random module with:")
+            cherrypy.log(message['data'].__str__())
             return message['data']
             
 
@@ -1626,7 +1632,7 @@ the event object should find any key value constraints that are
 in the packet's event object
 """
 class event(object):
-    global OPS
+    global OPS 
 
     def __init__(self):
         self.errors = []
@@ -1635,8 +1641,7 @@ class event(object):
         name = self.__str__()
 
         for i in self.errors:
-            self.logger.append(dict(object=name, message=i))
-
+            self.logger.append(dict(object=name, message=i)) 
     """
     dynamic queries implementation 'borrowed' from
     http://thadeusb.com/weblog/2010/1/3/web2py_dynamic_queries
@@ -1652,6 +1657,8 @@ class event(object):
         limit = 12 
         page = 0
 
+        cherrypy.log("entering: event module with:")
+        cherrypy.log(message.__str__())
         reserved = ['limit', 'page', 'type']
 
         for k,v in message['packet']['event'].iteritems():
@@ -1715,33 +1722,38 @@ class event(object):
             else:
               rows = _OL_DB(query).select(limitby=(0, limit))
 
+            cherrypy.log("leaving event module with: ")
+            cherrypy.log(rows.as_list().__str__())
             return rows.as_list()
 
         else:
 
-            for k in range(0, len(message['data'])):
+            if  len(message['data']) > 0:
+              for k in range(0, len(message['data'])):
 
-                """
-                whenever a match is met
-                increase by the step which
-                is 1 divided by the number of options
-                """
-                olen = len(opts)
-                step = float(1) / float(olen)
+                  """
+                  whenever a match is met
+                  increase by the step which
+                  is 1 divided by the number of options
+                  """
+                  olen = len(opts)
+                  step = float(1) / float(olen)
 
-                if not 'confidence' in message['data'][k].keys():
-                        message['data'][k]['confidence'] = 1
+                  if not 'confidence' in message['data'][k].keys():
+                          message['data'][k]['confidence'] = 1
 
-                for i in opts:
-                    op = i['op']
+                  for i in opts:
+                      op = i['op']
 
-                    if op == 'like':
-                        if len(re.findall('.*' + i['value'] + '.*', message['data'][k][i['key']])) > 0:
-                            message['data'][k]['confidence'] += step
-                    else:
-                        if OPS[op](message['data'][k][i['key']], i['value']):
-                            message['data'][k]['confidence'] += step
+                      if op == 'like':
+                          if len(re.findall('.*' + i['value'] + '.*', message['data'][k][i['key']])) > 0:
+                              message['data'][k]['confidence'] += step
+                      else:
+                          if OPS[op](message['data'][k][i['key']], i['value']):
+                              message['data'][k]['confidence'] += step
 
+            cherrypy.log(" Leaving event module with: ")
+            cherrypy.log(message['data'].__str__())
             return message['data']  
 
 globals()['geo'] = globals()['geolocation']
