@@ -23,3 +23,7 @@ socket/*
 
 seeds/*
 !seeds/README
+
+src/*
+!src/oneline/
+!src/setup.py
