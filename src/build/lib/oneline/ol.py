@@ -100,29 +100,34 @@ def caller_name(skip=2):
 
        An empty string is returned if skipped levels exceed stack height
     """
+
+    details =  {
+        "module": "",
+        "class": "",
+        "function": ""  
+    }
     stack = inspect.stack()
     start = 0 + skip
     if len(stack) < start + 1:
-      return ''
+      return details
     parentframe = stack[start][0]    
 
     name = []
-    module = inspect.getmodule(parentframe)
-    # `modname` can be None when frame is executed directly in console
+    module = inspect.getmodule(parentframe) # `modname` can be None when frame is executed directly in console
     # TODO(techtonik): consider using __main__
     if module:
-        name.append(module.__name__)
+        details['module'] = module.__name__
     # detect classname
     if 'self' in parentframe.f_locals:
         # I don't know any way to detect call from the object method
         # XXX: there seems to be no way to detect static method call - it will
         #      be just a function call
-        name.append(parentframe.f_locals['self'].__class__.__name__)
+        details['class'] =  parentframe.f_locals['self'].__class__.__name__
     codename = parentframe.f_code.co_name
     if codename != '<module>':  # top level usually
-        name.append( codename ) # function or a method
-    del parentframe
-    return ".".join(name)
+        details['function']  = codename # function or a method del parentframe
+    return details
+    #return ".".join(name)
 
 """
 scan the whole config aside from the
@@ -130,24 +135,25 @@ database settings.  """
 def scan_config(caller):
 
     config = dict()
-    proto = re.findall(r'([\w\_]+)\.', caller)
-    conf = False
-
-    if len(re.findall("\.conf",caller)) == 0:
-        config_file = proto[0] + ".conf"
-        config['module']  = proto[0]
+    #conf = False
+    config_file = ""
+    if not ".conf" in caller:
+      config_file = caller + ".conf"
     else:
-        config_file = caller
+      config_file = caller
 
-    keyword = "(.*)\s+?=\s+?'(.*)'"
-    file = open("/usr/local/oneline/conf/"+ config_file).read()
-    lines = file.split("\n")
-    for i in lines:
-      if not re.findall("^#", i):
-        match = re.findall(keyword, i)
-        if match:
-          config[match[0][0]] = match[0][1]
-      
+   
+    if os.path.isfile("/usr/local/oneline/conf/"+config_file):
+
+      keyword = "(.*)\s+?=\s+?'(.*)'"
+      file = open("/usr/local/oneline/conf/"+ config_file).read()
+      lines = file.split("\n")
+      for i in lines:
+        if not re.findall("^#", i):
+          match = re.findall(keyword, i)
+          if match:
+            config[match[0][0]] = match[0][1]
+        
     return config
 
 
@@ -155,13 +161,18 @@ def scan_config(caller):
 start the streaming
 process
 """
-def stream(agent='', pline='', db=''):
+def stream(agent='', pline='', db='',objects=dict()):
     obj = inspect.currentframe().f_back.f_locals['self']
-
+    config = caller_name()
+    cherrypy.log("received information from module: as")
+    cherrypy.log(caller_name().__str__())
     if db == '':
-        db = storage(caller=caller_name())
+        config = caller_name()
 
-    return pipeline(pline, db, obj, scan_config(caller_name()))
+        db = storage(caller=config['class']) 
+  
+
+    return pipeline(obj, db, config, scan_config(config['class']))
 
 
 """
@@ -347,10 +358,9 @@ def controller_init(sql='',startserver=False, name=''):
   global _OL_CURRENT_APP 
   from oneline import olcli
   callername = caller_name()
-  fullname =re.findall(".*\.(.*)", callername)
-  if fullname: 
-    name = fullname[0]
-    caller = re.sub("_init$",  "", name)
+
+  if callername['function']:
+    caller = re.sub("_init$",  "", callername['function'])
     db = storage(conf=caller + ".conf", silent=True).get()['db']
     db.commit()
     
@@ -395,10 +405,10 @@ def controller_clean(cleansql=False):
   global _OL_CURRENT_APP
    
   caller= caller_name()
-  m = re.findall("\.(.*)_clean", caller)
-  if m:
-    caller = m[0]
-    absolute =  re.sub("_clean","", caller) 
+  
+  if caller['function']:
+    #caller = m[0]
+    absolute =  re.sub("_clean","", caller['function'])
       
     db = storage(conf=absolute + ".conf")
     print "Cleaning tables for application: " + absolute
@@ -424,17 +434,39 @@ def controller_restart():
   olcli.restartserver()
  
 
+def db_ready():
+  global _OL_DB
+  global _OL_TABLES
+  if _OL_DB:
+    count_of_tables_ready = 0
+    for i in _OL_TABLES:
+      if i in dir(_OL_DB):
+        count_of_tables_ready += 1
+    if count_of_tables_ready == len(_OL_TABLES) - 1:
+      return True
+  return False
+    
+     
+def query(queries):
+  thedb = db()
+  result = thedb(queries).select()
+  thedb.commit() 
+  return result
+
+
+ 
 def db():
-  global _OL_DB 
-  return _OL_DB
+  config  = caller_name()
+  db = storage(caller=config['class'])
+  return db.get()['db']
 
 
-"""
-parse the config
+""" parse the config
 and provide a key value structure
 """
 def config():
-  return scan_config(caller_name())
+  conf =  caller_name() 
+  return scan_config(conf['class'])
 
 class _server(object):
     def __init__(self, host, port, ssl=False):
@@ -684,22 +716,20 @@ class storage(object):
 
         proto = False
         if conf == '':
-            if caller == '':
-                caller = caller_name()
-
-            proto = re.findall(r'([\w\_]+)\.', caller)
-
-            if len(proto) > 0:
-                config_name = proto[0] + '.conf'
+            if caller:
+              config_real_name =  caller
+              config_name = config_real_name + ".conf"
+              caller = caller_name()
             else:
-                config_name = ''
+              raise Exception("Please provide a valid config")
         else:
             config_name = conf
-            caller = config_name
+            #proto = re.sub(".conf","",conf)
+            config_real_name = re.sub(".conf","",conf)
+            caller = caller_name()
 
         config = scan_config(config_name)
-        print "ONELINE: " +  caller + "'s " + "config file: " + config_name
-  
+        print "ONELINE: scanning " +   config_real_name  + " config"
         self.join_table = False
 
         ## when a db type is not provided
@@ -714,7 +744,7 @@ class storage(object):
         if not 'db_type' in config.keys() or not 'db_host' in config.keys():
           return None
         if proto:
-          logger = cherrypy.config['/' + proto[0]]['request.module_logger']
+          logger = cherrypy.config['/' + proto]['request.module_logger']
         else:
           logger = None
 
@@ -927,32 +957,32 @@ properties intact
 class pipeline(object):
     global OBJS
 
-    def __init__(self, objects, storage, caller, config):
-        self._objs = objects        
+    def __init__(self, callerObject, storage, caller, config):
+        self._objs = ''
         self.storage = storage
-        self.caller = caller
+        self.callerObject = callerObject
         self.config = config
         self.blob = []
        
         if not 'broadcast' in self.config.keys() or self.config['broadcast'] == 'singular':
-            self.caller.unique = uuid.uuid4().__str__()
+            self.callerObject.unique = uuid.uuid4().__str__()
       
         else:
             """ use the same unique id as the modules registered one """
-            self.caller.unique = cherrypy.config['/' +config['module']]['request.module_uuid'] 
+            self.callerObject.unique = cherrypy.config['/' +caller['module']]['request.module_uuid'] 
         """ uuid to identify this connection """
 
         if not 'freq' in self.config.keys():
-            self.caller.freq = 0
+            self.callerObject.freq = 0
         else:
-            self.caller.freq = int(self.config['freq'])
-        self.caller.config = self.config
-        self.logger = cherrypy.config['/' + config['module']]['request.module_logger']
+            self.callerObject.freq = int(self.config['freq'])
+        self.callerObject.config = self.config
+        self.logger = cherrypy.config['/' + caller['module']]['request.module_logger']
 
         self.setup()
 
     def setup(self):
-        client = cherrypy.engine.publish('add-client', self.caller.unique, self.caller)
+        client = cherrypy.engine.publish('add-client', self.callerObject.unique, self.callerObject)
         self.client = client
 
 
@@ -1121,7 +1151,7 @@ class pipeline(object):
         this message was received from
         """
       
-        client = cherrypy.engine.publish('get-client', self.caller.unique).pop()
+        client = cherrypy.engine.publish('get-client', self.callerObject.unique).pop()
    
         cherrypy.engine.log("Client is: %s" % client.__str__())
        
@@ -1141,7 +1171,7 @@ class pipeline(object):
             except:
               self.logger.log(dict(addr='',object=self.__str__(), time=_time.time(), message="Lost a connection, message was not sent"))
       
-        _time.sleep(self.caller.freq)
+        _time.sleep(self.callerObject.freq)
 
 """
 oneline's logger
