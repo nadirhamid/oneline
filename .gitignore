@@ -25,5 +25,7 @@ seeds/*
 !seeds/README
 
 src/*
+src/oneline/*.pyc
+src/dist/
 !src/oneline/
 !src/setup.py
