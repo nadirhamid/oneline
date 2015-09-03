@@ -37,6 +37,7 @@ SERVERS = dict(host='server.socket_host', port='server.socket_port', path='tools
 TABLE = ''
 MODULES = []
 _OL_SERVER = {}
+_OL_CALLER = None
 _OL_DB = []
 _OL_DBS = []
 _OL_TABLES = []
@@ -133,7 +134,6 @@ def caller_name(skip=2):
 scan the whole config aside from the
 database settings.  """
 def scan_config(caller):
-
     config = dict()
     #conf = False
     config_file = ""
@@ -170,7 +170,9 @@ def stream(agent='', pline='', db='',objects=dict()):
         config = caller_name()
 
         db = storage(caller=config['class']) 
-  
+    cherrypy.log("waiting for ready state")
+    #ready()
+    cherrypy.log("ONELINE is ready") 
 
     return pipeline(obj, db, config, scan_config(config['class']))
 
@@ -192,9 +194,6 @@ def stream(agent='', pline='', db='',objects=dict()):
       return json.dumps(results)
 """
 
-def query(query_piece, type="&"):
-  global _OL_QUERY
-  _OL_QUERY.append(dict(expr=query_piece, op=type))
 
 def nextcheck(pieces, cnt, pred):
   list = []
@@ -428,37 +427,55 @@ def controller_clean(cleansql=False):
       return True
 
       
-
 def controller_restart():
   from  oneline import olcli
   olcli.restartserver()
  
 
-def db_ready():
+def ready():
   global _OL_DB
   global _OL_TABLES
   if _OL_DB:
+    """
     count_of_tables_ready = 0
     for i in _OL_TABLES:
       if i in dir(_OL_DB):
         count_of_tables_ready += 1
     if count_of_tables_ready == len(_OL_TABLES) - 1:
       return True
+    """
+    return True
   return False
     
      
-def query(queries):
-  thedb = db()
-  result = thedb(queries).select()
-  thedb.commit() 
-  return result
-
 
  
-def db():
-  config  = caller_name()
-  db = storage(caller=config['class'])
-  return db.get()['db']
+def db(caller_object):
+  #global _OL_DB
+  #return _OL_DB
+  caller_object = caller_object.callerObject
+  storage = cherrypy.engine.publish('get-database',caller_object.dbunique).pop()
+  if  storage:
+    return storage.get()['db']
+   
+
+
+def  signalStop(object):
+  global _OL_DB
+  object = object.callerObject
+  clients = cherrypy.engine.publish('get-client', object.unique).pop()
+  for i in range(0, len(clients)):
+    if clients[i].unique == object.unique:
+      cherrypy.log("removing client: " + clients[i].unique) 
+      cherrypy.log("removing client that has db uniquie: " +clients[i].dbunique)
+      #del clients[i]
+  
+      #cherrypy.log("removing client: " + clients[i].unique)
+      #cherrypy.engine.publish('set-client', clients)
+      cherrypy.engine.publish('close-database',  clients[i].dbunique)
+      cherrypy.engine.publish('del-client',clients[i].dbunique)
+      return True
+  return False
 
 
 """ parse the config
@@ -525,29 +542,80 @@ class plugin(WebSocketPlugin):
     def __init__(self, bus):
         WebSocketPlugin.__init__(self, bus)
         self.clients = {}
+        self.databases = {}
  
     def start(self):
         WebSocketPlugin.start(self)
+        self.bus.subscribe('set-database',self.set_database)
+        self.bus.subscribe('get-database',self.get_database)
+        self.bus.subscribe('close-database',self.close_database)
         self.bus.subscribe('add-client', self.add_client)
+        self.bus.subscribe('set-client', self.set_client)
         self.bus.subscribe('get-client', self.get_client)
         self.bus.subscribe('del-client', self.del_client)
  
     def stop(self):
         WebSocketPlugin.stop(self)
+        self.bus.unsubscribe('set-database', self.set_database)
+        self.bus.unsubscribe('get-database', self.get_database)
+        self.bus.unsubscribe('close-database', self.close_database)
         self.bus.unsubscribe('add-client', self.add_client)
+           
+        self.bus.unsubscribe('set-client', self.del_client) 
         self.bus.unsubscribe('get-client', self.get_client)
         self.bus.unsubscribe('del-client', self.del_client)
+
+
+    def close_database(self,name):
+      thisDatabase = self.databases[name]
+      if thisDatabase:
+        theDatabase = thisDatabase.get()['db']
+        theDatabase._adapter.close()
+        del self.databases[name]
+
+    def set_database(self,name,dbobj):
+      if not name in self.databases.keys():
+        self.databases[name]  = dbobj
+
+    def get_database(self,name):
+      if name in self.databases.keys():
+        theDatabase = self.databases[name]
+        databaseConnection = self.databases[name].get()['db'] 
+        #databaseConnection._adapter.reconnect()
+        databaseConnection.commit()
+        #theDatabase = self.databases[name]
+        #$theDatabase.reconnect()
+        #theDatabase.commit()
+        #return self.databases[name]
+        return theDatabase
  
     def add_client(self, name, websocket):
         if not name in self.clients.keys():
             self.clients[name] = [] 
         self.clients[name].append(websocket)
+
+    def set_client(self, name, websockets):
+        if not name in self.clients.keys():
+          self.clients[name] = [] 
+        self.clients[name]  =websockets
  
     def get_client(self, name):
         return self.clients[name]
  
-    def del_client(self, name,socket):
-        del self.clients[name][socket]
+    def del_client(self, unique):
+        #clients = self.clients
+        #for i in self.clients[unique
+        for i in self.clients.keys():
+          theseclients =  cherrypy.engine.publish('get-client', i).pop()
+          for j in range(0, len(theseclients)):
+  
+            if theseclients[j].dbunique == unique:
+               del theseclients[j]
+               self.clients[i]  = theseclients
+        #del self.clients[unique]
+        #for i in range(0, len(self.clients)):
+        #  if self.clients[i].unique == unique:
+        #    del self.clients[i]
 
 class server(object):
     global SERVERS
@@ -721,7 +789,10 @@ class storage(object):
               config_name = config_real_name + ".conf"
               caller = caller_name()
             else:
-              raise Exception("Please provide a valid config")
+              caller = caller_name()
+              config_name =  caller['class'] + ".conf"
+              config_real_name = caller['class']
+              #raise Exception("Please provide a valid config")
         else:
             config_name = conf
             #proto = re.sub(".conf","",conf)
@@ -767,12 +838,12 @@ class storage(object):
         """
 
         if db_type == 'sqlite':
-            _OL_DB = self.db = DAL('sqlite://' + database + '.db', migrate_enabled=False, folder=dbfolder, auto_import=True)    
+            _OL_DB = self.db = DAL('sqlite://' + database + '.db', migrate_enabled=False, folder=dbfolder, auto_import=True,pool_size=None)    
         else:   
             if silent:
-              _OL_DB = self.db = DAL(db_type + '://' + username + ':' + password + '@' + db_host + '/' + database)
+              _OL_DB = self.db = DAL(db_type + '://' + username + ':' + password + '@' + db_host + '/' + database,pool_size=None)
             else:
-              _OL_DB = self.db = DAL(db_type + '://' + username + ':' + password + '@' + db_host + '/' + database, migrate_enabled=False)
+              _OL_DB = self.db = DAL(db_type + '://' + username + ':' + password + '@' + db_host + '/' + database, migrate_enabled=False,pool_size=None)
 
         
         if silent:
@@ -869,12 +940,16 @@ class storage(object):
                   self.db.define_table(*args)
 
         _OL_TABLE = table
-      
+     
         _OL_DB = self.db
         cherrypy.log("registering the database and table under: %s, %s" % (_OL_DB.__str__(), _OL_TABLE))
         self.db.commit()
 
-
+    def query(self, queries):
+        self.db.commit()
+        result = self.db(queries).select()
+        self.db.commit()
+        return  result
     """
     get a storage object    
     """
@@ -902,11 +977,14 @@ class module(WebSocket):
     def opened(self):
 
         """  bind the basics """
-        self.db = db() 
+        ##self.db = db(self) 
         if 'start' in dir(self):
-            return self.start()
+            self.start()
+            self.db =db(self.pipeline)
+            self.query =self.pipeline.storage.query
 
     def closed(self, *args):
+        signalStop(self.pipeline)
         if 'end' in dir(self):
             
             return self.end()
@@ -958,6 +1036,9 @@ class pipeline(object):
     global OBJS
 
     def __init__(self, callerObject, storage, caller, config):
+
+        #cherrypy.engine.publish('set-database'
+
         self._objs = ''
         self.storage = storage
         self.callerObject = callerObject
@@ -966,10 +1047,14 @@ class pipeline(object):
        
         if not 'broadcast' in self.config.keys() or self.config['broadcast'] == 'singular':
             self.callerObject.unique = uuid.uuid4().__str__()
+            #self.callerObject.meunique = uuid
+            self.callerObject.dbunique = uuid.uuid4().__str__()
       
         else:
             """ use the same unique id as the modules registered one """
+            """ database unique should always be unique regardless """
             self.callerObject.unique = cherrypy.config['/' +caller['module']]['request.module_uuid'] 
+            self.callerObject.dbunique= uuid.uuid4().__str__()
         """ uuid to identify this connection """
 
         if not 'freq' in self.config.keys():
@@ -983,6 +1068,7 @@ class pipeline(object):
 
     def setup(self):
         client = cherrypy.engine.publish('add-client', self.callerObject.unique, self.callerObject)
+        storage = cherrypy.engine.publish('set-database',self.callerObject.dbunique,self.storage)
         self.client = client
 
 
@@ -1034,7 +1120,7 @@ class pipeline(object):
             m = message.as_dict()
             message = pack(m)
           
-             
+        storage = cherrypy.engine.publish('get-database', self.callerObject.dbunique).pop()
         uuid =m['uuid'] if 'uuid'  in m.keys() else uuid.uuid4()
         timestamp = m['timestamp'] if 'timestamp'  in m.keys() else time.time()
         connection_uuid   = m['connection_uuid']
@@ -1078,7 +1164,7 @@ class pipeline(object):
 
         for i in self._objs:
             try:
-              i.storage = self.storage
+              i.storage = storage
               i.logger = self.logger
 
               if c == 0:
@@ -1153,7 +1239,7 @@ class pipeline(object):
       
         client = cherrypy.engine.publish('get-client', self.callerObject.unique).pop()
    
-        cherrypy.engine.log("Client is: %s" % client.__str__())
+        #cherrypy.engine.log("Client is: %s" % client.__str__())
        
         if len(m) > 0 and len(self._objs) > 0:
             data = unicodeAll(m) 
@@ -1169,9 +1255,14 @@ class pipeline(object):
             try:
               i.send(bytes)   
             except:
-              self.logger.log(dict(addr='',object=self.__str__(), time=_time.time(), message="Lost a connection, message was not sent"))
-      
-        _time.sleep(self.callerObject.freq)
+              #self.logger.append(dict(addr='',object=self.__str__(), time=_time.time(), message="Lost a connection, message was not sent"))
+              ## this should not happen when the module's stop function is called
+              ## it will be implemented automatically in the newer release of oneline
+              cherrypy.engine.publish('del-client',i.dbunique)
+     
+        ## TODO 
+        ## not correct way of calling a sleep function inside cherrypy use threaded version!
+        #_time.sleep(self.callerObject.freq)
 
 """
 oneline's logger

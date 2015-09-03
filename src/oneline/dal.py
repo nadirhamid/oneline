@@ -644,6 +644,7 @@ class ConnectionPool(object):
         if `self.pool_size>0` it will try pull the connection from the pool
         if the connection is not active (closed by db server) it will loop
         if not `self.pool_size` or no active connections in pool makes a new one
+
         """
         if getattr(self, 'connection', None) is not None:
             return
@@ -4591,7 +4592,6 @@ class DatabaseStoredFile:
                     datafile.close()
             elif mode in ('r', 'rw'):
                 raise RuntimeError("File %s does not exist" % filename)
-
     def read(self, bytes):
         data = self.data[self.p:self.p+bytes]
         self.p += len(data)
@@ -8017,6 +8017,12 @@ class DAL(object):
             self.import_table_definitions(adapter.folder,
                                           tables=tables)
 
+
+      
+    #def increase_pool_size(self):
+    #  self.pool_size += 1
+    #def decrease_pool_size(self):
+    # self.pool_size -= 1
     @property
     def tables(self):
         return self._tables
