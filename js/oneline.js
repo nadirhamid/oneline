@@ -1,6 +1,4 @@
-// Frontend of Oneline.
-// Written by Nadir Hamid
-//
+// Frontend of Oneline.  // Written by Nadir Hamid //
 // Code can be distributed; copied under
 // an MIT license
 (function () {
@@ -44,10 +42,91 @@
   Oneline.host = Oneline.host || 'localhost';
   Oneline.port = Oneline.port || 9000;
   Oneline.protoline = Oneline.protoline || [];
-  Oneline.connection_uuid = "";
-  Oneline.lastResponse = "";
   Oneline.objects = Oneline.objects || [];
-  Oneline.loaded = 0;
+  Oneline.lastResponse = "";
+  Oneline.after = Date.now();
+  Oneline.readyFnCalled = false;
+  Oneline.updated = false;
+  Oneline.triggeredUpdate  = true;
+  Oneline.currentRequests =[];
+  Oneline.removedRequests =[];
+  Oneline.lastObjects = {};
+  Oneline.asyncs = {};
+  Oneline.stall =false;
+
+  /**
+   * accept after a given time
+   * all requests will either fail
+   * or succeed based on this time.
+   *by default this should be the time oneline was initialized
+   * 
+   *
+   * request_time < delta = fail
+   * otherwise
+   * use callback
+   *
+   * @param time
+   * a time to match
+   */
+  Oneline.acceptAfter = function(time) {
+     Oneline.after = time;
+      
+  };
+  // one time
+  Oneline.once =   function(message) {
+           var m_ = {}; 
+           var packet = {};        
+            packet[message.obj]  = message.data;
+
+                          t = Date.now();
+                          m_.packet = packet; 
+                          m_.packet.order = [];
+                          m_.packet.interop = O.interop;
+                          m_.uuid = O.uuid();
+                          m_.timestamp = t;
+                          m_.connection_uuid = O.connection_uuid;
+        // wait for callback
+        // and the connection
+        Oneline.socket.send(Oneline.interop.stringify(m_));
+  };
+
+  Oneline.ready = function(callback) {
+      var readyInterval= setInterval(function() {
+          if (Oneline.socket.readyState === 1) {
+            callback();
+            clearInterval(readyInterval);
+          }
+      }, 500);
+  };
+
+  Oneline.triggerUpdate = function(obj) {
+      Oneline.updateObjects[obj.type] =obj;
+  };
+  Oneline.clearCurrent = function(instance) {
+    for (var i in Oneline.objects) { if (Oneline.objects[i] instanceof instance) {
+          delete Oneline.objects[i];
+        }
+    }
+  };
+
+  Oneline.setAsync = function(key,val) {
+      Oneline.asyncs[key] = val;
+  };
+  Oneline.getAsync = function(key) {
+      return Oneline.asyncs[key];
+  };
+  Oneline.setStall = function(trueOrFalse) {
+    Oneline.stall = trueOrFalse;
+  };
+
+  /**
+   * get the after parameter of  
+   * oneline
+   */
+  Oneline.getAfter = function() {
+      return Oneline.after;
+   };
+    
 
   /* setup online with the 
    * given options.
@@ -57,20 +136,17 @@
   Oneline.setup = function(options) {
       Oneline.settings = options;
       Oneline.port = options.port || Oneline.port;
-      Oneline.host = options.host || Oneline.host;
-      Oneline.type = options.type === 'bind' ? 'bind' : 'auto';
+      Oneline.host = options.host || Oneline.host; Oneline.type = options.type === 'bind' ? 'bind' : 'auto';
       Oneline.on = options.on || 'click';
-      Oneline.usessl  = options.usessl  || false;
-      Oneline.connection_uuid = Oneline.uuid();
       Oneline.target = options.target;
-      Oneline.protocol = Oneline.usessl ? "wss://": "ws://";
+      Oneline.connection_uuid = Oneline.connection_uuid || Oneline.uuid();
 
       options.server = options.module || options.server;
 
       if (options.server.match(/ws\:\/\//))
         Oneline.settings.server = options.server;
       else
-        Oneline.settings.server = options.server = Oneline.protocol + Oneline.host + ':' + Oneline.port + '/' + options.server;
+        Oneline.settings.server = options.server = 'ws://' + Oneline.host + ':' + Oneline.port + '/' + options.server;
 
       if (OnelineTransport.WebSockets.detect()) {
       Oneline.socket = OnelineTransport.WebSockets.Ctor(Oneline.settings.server);
@@ -88,8 +164,17 @@
       }
       Oneline.interop = typeof options.interop !== 'undefined' ? options.interop === 'json' ? JSON : BSON : BSON;
       Oneline.freq = typeof options.freq !== 'undefined' ? options.freq : Oneline.freq;
-      Oneline.socket.onopen = function() { Oneline.loaded = 1; };       
-      Oneline.socket.onmessage = function(evt) { console.log(O.interop.parse(evt.data)); };
+      Oneline.socket.onopen = function() { };
+      Oneline.socket.onmessage = function(evt) { 
+          var data =  Oneline.interop.parse(evt.data);
+
+          //if (parseInt(data.timestamp_request) >  parseInt(Oneline.getAfter())) {
+              if (typeof Oneline.callback  === 'function') {
+              Oneline.callback(data);
+              }
+         // }
+       };
+      //Oneline.connector.connect();
       if (typeof options.order !== 'undefined') {
         Oneline.order = options.order;
       } else {
@@ -104,7 +189,11 @@
         * for the target event
         */
       Oneline.target = document.getElementById(Oneline.target);
+     // connect the websocket instance
+      // moved from pipeline as we may somtimes need to issue messages before
+      // the pipeline
 
+     Oneline.connector.connect();
   };
 
   /**
@@ -144,22 +233,41 @@
    * 
    * @method
    */
-  Oneline.fetchOptional = function(mod, option, value) {
-     if (typeof value === 'undefined') {
+  Oneline.fetchOptional = function(mod, option) {
+     if (typeof option === 'undefined') {
         return Oneline.contextOptions[mod][option]['default'];
      }
 
      return option;
   };
 
-  Oneline.isMe = function(message) {
-    if (message.connection_uuid === O.connection_uuid) {
-      return true;
-    }
-    return false;
-  };
-  
+  /**
+   is the sender the person who requested this
+   stream ?
+   * @param response
+   *  optional response for the check
+  */
+  Oneline.isMe = function(response) {
+      if (response) {
+          if (typeof response.connection_uuid !=='undefined') {
+              if (Oneline.connection_uuid === response.connection_uuid) {
+                return true;
 
+              }
+          }
+          if (typeof response === 'string') {
+              if (Oneline.connection_uuid === response) {
+                return true;
+              }
+          }
+       }
+       if (Oneline.lastResponse) {
+          if (Oneline.lastResponse.connection_uuid === Oneline.connection_uuid) {
+            return true;
+          }
+      }
+      return false;
+  };
   /* agent object for oneline
    * @class
    */
@@ -175,7 +283,7 @@
     options = options || {};
     options.pipeline = options.pipeline || O.protoline;
 
-    return O.pipeline({}, options.pipeline, function(res) { console.log(res); } ).run(); 
+    return O.pipeline({}, options.pipeline, function(res) {  } ).run(); 
   };
 
   /* simple class for 
@@ -199,11 +307,18 @@
    * output all data in desired db table
    */
   Oneline.echo = Oneline.echo = function(options, ready) {
+    if(Oneline.stall) {
+      return false;
+     }
+    
+    Oneline.lastObjects[Oneline.time.type] = this; 
     Oneline.echo.options = options;
-    if (!ready)
+    if (!ready) {
+    Oneline.clearCurrent(Oneline.echo);
     Oneline.objects.push(
             clone(Oneline.echo(options, 1))
     );
+    }
     return {
         /**
          * run the echo object
@@ -223,12 +338,19 @@
    * @class
    */
   Oneline.geolocation = Oneline.geo = function(options, ready) {
+      if (Oneline.stall) {
+        return false;
+      }
+      Oneline.lastObject = this;
+      Oneline.geolocation.type = "geolocation";
       Oneline.geolocation.options = options;
-      if (!ready)
+      Oneline.lastObjects[Oneline.geolocation.type] = this;
+      if (!ready) {
+      Oneline.clearCurrent(Oneline.geo);
       Oneline.objects.push(
             clone(Oneline.geo(options, 1))
       );
-
+      }
 
       return {
 
@@ -245,7 +367,7 @@
               this.state = 0;
               this.m.geo.every = O.geolocation.options.every;
               this.m.geo.range = O.geolocation.options.range;
-              this.m.geo.limit = O.fetchOptional("geolocation", "limit", O.geolocation.options.limit);
+              this.m.geo.limit = O.fetchOptional(O.geolocation.options.limit);
               var that = this;
 
               navigator.geolocation.getCurrentPosition(function(res) {
@@ -263,11 +385,18 @@
    * @class
    */
   Oneline.event = function(options, ready) {
+      if (Oneline.stall) {
+        return false;
+      }
       Oneline.event.options = options;
-      if (!ready)
+      Oneline.event.type = "event";
+      Oneline.lastObjects[Oneline.event.type] = this;
+      if (!ready) {
+        Oneline.clearCurrent(Oneline.event);
         Oneline.objects.push(
             clone(Oneline.event(options, 1))
         );
+      }
       return {
 
           /* event object does not
@@ -294,11 +423,19 @@
    * @class
    */
   Oneline.generic = function(options, ready) {
+    if (Oneline.stall) {
+        return false;
+    }
     Oneline.generic.options = options;
-    if (!ready)
+    Oneline.lastObject = this;
+
+    if (!ready) {
+     
+      Oneline.clearCurrent(Oneline.generic);
       Oneline.objects.push(
           clone(Oneline.generic(options, 1))
       );
+    }
 
       return {
 
@@ -325,7 +462,7 @@
           this.m.generic.data = Oneline.generic.options.data;
           this.state = 1;
 
-          console.log(this);
+          //console.log(this);
         }
       }
   };
@@ -335,11 +472,19 @@
    * @class
    */
    Oneline.time = function(options) {
+      if (Oneline.stall) {
+          return false;
+      } 
+      Oneline.time.type = "time";
       Oneline.time.options = options;
-      if (!ready)
+      Oneline.lastObjects[Oneline.time.type] = this;
+      
+      if (!ready) {
+        Oneline.clearCurrent(Oneline.time);
         Oneline.objects.push(
             clone(Oneline.time(options, 1))
         );
+      }
 
       return {
 
@@ -359,12 +504,19 @@
    /* random module
     * @class
     */
-   Oneline.random = function(options, ready) {
+   Oneline.random = function(options) {
+      if (Oneline.stall) {
+        return false;
+       }
+      Oneline.random.type = "random";
       Oneline.random.options = options;
-      if (!ready)
+      Oneline.lastObject[Oneline.random.type] = this;
+      if (!ready) { 
+        Oneline.clearCurrent(Oneline.random);
         Oneline.objects.push(
             clone(Oneline.random(options, 1))
         );
+      }
 
       return {
           run: function(m) 
@@ -422,11 +574,8 @@
           run: function() 
           {
               O.t = window['set' + O.provider](function() {
-                  if (Oneline.running)
-                      return;
-
-                  if (!Oneline.loaded)
-                      return O.connector.connect();
+                  // try only when the connection state is 0
+                  Oneline.connector.connect();
 
                   if (Oneline.signalStop
                      || O.socket.readyState === 2
@@ -435,10 +584,7 @@
                   }
 
                   O.running = 1;
-                  O.socket.onmessage = function(evt) { return O.callback(O.interop.parse(evt.data)); };
-
-                  var m = {}, c = 0, m_ = {}, ii = 0, t, i = 0;
-
+                  var c = 0, m_ = {}, m ={} ; 
                   /* this should be communative
                    * and not
                    */
@@ -455,6 +601,10 @@
                               return;
 
                           if (O.objects[c].state === 1) {
+                              if (O.objects[c] !== O.lastObjects[O.objects[c].type]
+                                && typeof O.lastObjects[O.objects[c].type] !== 'undefined') {
+                                  return;
+                                }
 
                               m = collect(m, O.objects[c].m);
 
@@ -469,28 +619,28 @@
                   O.ooot = window['set' + O.runner](function() {
                       if (c === O.objects.length) {
                           m_.packet = m;
+   
+                          if (Object.keys(m_.packet).length > 0) {
+                            /* if we have an agent,
+                             * add it to the message
+                             */
+                            t = Date.now();
+                            m_.packet.order = O.order;
+                            m_.packet.interop = O.interop;
+                            m_.uuid = O.uuid();
+                            m_.timestamp = t;
+                            m_.connection_uuid = O.connection_uuid;
 
-                          /* if we have an agent,
-                           * add it to the message
-                           */
-                          t = new Date().getTime();
-                          m_.packet.order = O.order;
-                          m_.packet.timestamp = t; 
-                          m_.packet.interop = O.interop;
-                          m_.uuid = O.uuid();
-                          m_.connection_uuid = O.connection_uuid;
-                          m_.timestamp =new Date().getTime();
+                            O.socket.send(O.interop.stringify(m_));
 
+                            //if (typeof O.callback === 'function')
+                            //    O.callback(m_);
 
-                          O.socket.send(O.interop.stringify(m_));
-
-                          if (typeof O.callback === 'function')
-                              O.callback(m_);
-
-                          O.running = 0;
+                            O.running = 0;
+                          }
 
                           window['clear' + O.runner](O.ooot);
-                      }
+                        }
                   }, 1);
 
               }, O.freq);
@@ -543,7 +693,7 @@
           /* if already trying to connect
            * disregard request
            */
-          if (O.socket.readyState === 0)
+          if (O.socket.readyState === 0 || O.socket.readyState === 1)
             return;
 
           return O.setup(O.settings);
@@ -553,9 +703,7 @@
        */
       disconnect: function()
       {
-          O.loaded = 0;
-
-          if (O.socket.readyState === 3)
+          if (O.socket.readyState === 2 || O.socket.readyState === 3)
             return;
 
           return O.socket.close();

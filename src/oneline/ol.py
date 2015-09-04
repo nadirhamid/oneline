@@ -950,6 +950,14 @@ class storage(object):
         result = self.db(queries).select()
         self.db.commit()
         return  result
+
+    def insert(self, table, **kwargs):
+      self.db.commit()
+      newrow = getattr(self.db,table).insert(**kwargs)
+      self.db.commit()
+      return newrow
+
+
     """
     get a storage object    
     """
@@ -982,6 +990,8 @@ class module(WebSocket):
             self.start()
             self.db =db(self.pipeline)
             self.query =self.pipeline.storage.query
+            self.insert =self.pipeline.storage.insert
+
 
     def closed(self, *args):
         signalStop(self.pipeline)
