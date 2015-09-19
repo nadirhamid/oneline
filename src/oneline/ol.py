@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*- 
-import argparse 
+# -*- coding: utf-8 -*- import argparse 
 import json
 import bsonlib
 import operator
@@ -411,18 +410,21 @@ def controller_clean(cleansql=False):
       
     db = storage(conf=absolute + ".conf")
     print "Cleaning tables for application: " + absolute
+    realdb = db.get()['db'] 
+    realdb.commit()
     if cleansql:
       try:
         realdb = db.get()['db']
-         
+        realdb.commit() 
         to_tables = tables()
         for i in to_tables:
           print "Attempting to clean: {0}".format(i)
           rows = realdb(getattr(realdb, i)).select() 
           for j in rows:
-            realdb(getattr(getattr(realdb,i), 'id') == j.id).delete()
+            row = realdb(getattr(getattr(realdb,i), 'id') == j.id).delete()
             realdb.commit()
-      except:
+      except Exception, e:
+        print e.__str__() 
         raise Exception("Was not able to clean the database")
       return True
 
@@ -478,7 +480,8 @@ def  signalStop(object):
   return False
 
 
-""" parse the config
+""" 
+parse the config
 and provide a key value structure
 """
 def config():
@@ -571,7 +574,7 @@ class plugin(WebSocketPlugin):
       if thisDatabase:
         theDatabase = thisDatabase.get()['db']
         theDatabase._adapter.close()
-        del self.databases[name]
+        #del self.databases[name]
 
     def set_database(self,name,dbobj):
       if not name in self.databases.keys():
@@ -611,7 +614,6 @@ class plugin(WebSocketPlugin):
   
             if theseclients[j].dbunique == unique:
                del theseclients[j]
-               self.clients[i]  = theseclients
         #del self.clients[unique]
         #for i in range(0, len(self.clients)):
         #  if self.clients[i].unique == unique:
@@ -951,6 +953,11 @@ class storage(object):
         self.db.commit()
         return  result
 
+    def count(self,queries, **kwargs):
+      self.db.commit()
+      result = self.db(queries).count(**kwargs)
+      self.db.commit()
+      return result
     def insert(self, table, **kwargs):
       self.db.commit()
       newrow = getattr(self.db,table).insert(**kwargs)
@@ -987,23 +994,34 @@ class module(WebSocket):
         """  bind the basics """
         ##self.db = db(self) 
         if 'start' in dir(self):
+          try:
             self.start()
             self.db =db(self.pipeline)
             self.query =self.pipeline.storage.query
             self.insert =self.pipeline.storage.insert
+            self.count = self.pipeline.storage.count
+          except Exception, e:
+            print e.__str__()
 
 
     def closed(self, *args):
-        signalStop(self.pipeline)
-        if 'end' in dir(self):
-            
-            return self.end()
+        try:
+          signalStop(self.pipeline)
+          if 'end' in dir(self):
+              
+              return self.end()
+        except Exception, e:
+          print e.__str__()
 
     def received_message(self, m):
-        if 'receiver' in dir(self):
-            if isinstance(m,TextMessage):
-              m  =m.__str__()
-            return self.receiver(request(parse(m)))
+        try:
+          if 'receiver' in dir(self):
+              if isinstance(m,TextMessage):
+                m  =m.__str__()
+              return self.receiver(request(parse(m)))
+        except Exception, e:
+          print e.__str__()
+            
 
 """
 agent definition
