@@ -1,5 +1,4 @@
-// Frontend of Oneline.  // Written by Nadir Hamid //
-// Code can be distributed; copied under
+// Frontend of Oneline.  // Written by Nadir Hamid // // Code can be distributed; copied under
 // an MIT license
 (function () {
   var root = this;
@@ -45,14 +44,9 @@
   Oneline.objects = Oneline.objects || [];
   Oneline.lastResponse = "";
   Oneline.after = Date.now();
+  Oneline.signature = "";
   Oneline.readyFnCalled = false;
   Oneline.updated = false;
-  Oneline.triggeredUpdate  = true;
-  Oneline.currentRequests =[];
-  Oneline.removedRequests =[];
-  Oneline.lastObjects = {};
-  Oneline.asyncs = {};
-  Oneline.stall =false;
 
   /**
    * accept after a given time
@@ -70,7 +64,16 @@
    */
   Oneline.acceptAfter = function(time) {
      Oneline.after = time;
-      
+     clearInterval(Oneline.t);
+     clearTimeout(Oneline.t);
+     clearInterval(Oneline.oot);
+     clearTimeout(Oneline.oot);
+     clearInterval(Oneline.ooot);
+     clearTimeout(Oneline.ooot); 
+
+  };
+  Oneline.newSignature = function() {
+    Oneline.signature = Oneline.uuid();
   };
   // one time
   Oneline.once =   function(message) {
@@ -87,6 +90,8 @@
                           m_.connection_uuid = O.connection_uuid;
         // wait for callback
         // and the connection
+
+        Oneline.newSignature();
         Oneline.socket.send(Oneline.interop.stringify(m_));
   };
 
@@ -99,24 +104,11 @@
       }, 500);
   };
 
-  Oneline.triggerUpdate = function(obj) {
-      Oneline.updateObjects[obj.type] =obj;
-  };
   Oneline.clearCurrent = function(instance) {
     for (var i in Oneline.objects) { if (Oneline.objects[i] instanceof instance) {
           delete Oneline.objects[i];
         }
     }
-  };
-
-  Oneline.setAsync = function(key,val) {
-      Oneline.asyncs[key] = val;
-  };
-  Oneline.getAsync = function(key) {
-      return Oneline.asyncs[key];
-  };
-  Oneline.setStall = function(trueOrFalse) {
-    Oneline.stall = trueOrFalse;
   };
 
   /**
@@ -133,15 +125,18 @@
    *
    * @param options -> object
    */
-  Oneline.setup = function(options) {
+  Oneline.setup = function(options, signature) {
       Oneline.settings = options;
       Oneline.port = options.port || Oneline.port;
       Oneline.host = options.host || Oneline.host; Oneline.type = options.type === 'bind' ? 'bind' : 'auto';
       Oneline.on = options.on || 'click';
       Oneline.target = options.target;
       Oneline.connection_uuid = Oneline.connection_uuid || Oneline.uuid();
-
+      if (typeof signature === 'undefined') {
+      Oneline.signature = Oneline.uuid();
+      }
       options.server = options.module || options.server;
+    
 
       if (options.server.match(/ws\:\/\//))
         Oneline.settings.server = options.server;
@@ -307,18 +302,17 @@
    * output all data in desired db table
    */
   Oneline.echo = Oneline.echo = function(options, ready) {
-    if(Oneline.stall) {
-      return false;
-     }
-    
-    Oneline.lastObjects[Oneline.time.type] = this; 
     Oneline.echo.options = options;
     if (!ready) {
     Oneline.clearCurrent(Oneline.echo);
+    var obj  = clone(Oneline.echo(options,1));
+    obj.signature = Oneline.signature;
     Oneline.objects.push(
-            clone(Oneline.echo(options, 1))
+        obj 
     );
     }
+        
+    
     return {
         /**
          * run the echo object
@@ -338,17 +332,14 @@
    * @class
    */
   Oneline.geolocation = Oneline.geo = function(options, ready) {
-      if (Oneline.stall) {
-        return false;
-      }
-      Oneline.lastObject = this;
       Oneline.geolocation.type = "geolocation";
       Oneline.geolocation.options = options;
-      Oneline.lastObjects[Oneline.geolocation.type] = this;
       if (!ready) {
       Oneline.clearCurrent(Oneline.geo);
-      Oneline.objects.push(
-            clone(Oneline.geo(options, 1))
+      var obj =   clone(Oneline.geolocation(options,1));
+      obj.signature = Oneline.signature;
+      Oneline.objects.push_back(
+        obj
       );
       }
 
@@ -385,16 +376,14 @@
    * @class
    */
   Oneline.event = function(options, ready) {
-      if (Oneline.stall) {
-        return false;
-      }
       Oneline.event.options = options;
       Oneline.event.type = "event";
-      Oneline.lastObjects[Oneline.event.type] = this;
       if (!ready) {
         Oneline.clearCurrent(Oneline.event);
+        var obj = clone(Oneline.event(options,1));
+        obj.signature = Oneline.signature;
         Oneline.objects.push(
-            clone(Oneline.event(options, 1))
+          obj
         );
       }
       return {
@@ -423,17 +412,15 @@
    * @class
    */
   Oneline.generic = function(options, ready) {
-    if (Oneline.stall) {
-        return false;
-    }
     Oneline.generic.options = options;
-    Oneline.lastObject = this;
 
     if (!ready) {
      
       Oneline.clearCurrent(Oneline.generic);
+      var obj = clone(Oneline.generic(options,1));
+      obj.signature = Oneline.signature;
       Oneline.objects.push(
-          clone(Oneline.generic(options, 1))
+        obj
       );
     }
 
@@ -471,18 +458,16 @@
   /* time module
    * @class
    */
-   Oneline.time = function(options) {
-      if (Oneline.stall) {
-          return false;
-      } 
+   Oneline.time = function(options, ready) {
       Oneline.time.type = "time";
       Oneline.time.options = options;
-      Oneline.lastObjects[Oneline.time.type] = this;
       
       if (!ready) {
         Oneline.clearCurrent(Oneline.time);
+        var obj = clone(Oneline.time(options,1));
+        obj.signature = Oneline.signature;
         Oneline.objects.push(
-            clone(Oneline.time(options, 1))
+          obj
         );
       }
 
@@ -504,17 +489,15 @@
    /* random module
     * @class
     */
-   Oneline.random = function(options) {
-      if (Oneline.stall) {
-        return false;
-       }
+   Oneline.random = function(options, ready) {
       Oneline.random.type = "random";
       Oneline.random.options = options;
-      Oneline.lastObject[Oneline.random.type] = this;
       if (!ready) { 
         Oneline.clearCurrent(Oneline.random);
+        var obj = clone(Oneline.random(options,1));
+        obj.signature = Oneline.signature;
         Oneline.objects.push(
-            clone(Oneline.random(options, 1))
+            obj
         );
       }
 
@@ -573,47 +556,60 @@
            */
           run: function() 
           {
+              Oneline.signalStop  = false;
+              Oneline.connector.connect();
+              if (Oneline.socket.readyState !== 0) { // wait for a connection
+                  setTimeout(function() {
+                   return Oneline.pipeline(Oneline.callback).run();
+                  }, 100);
+                  return;
+              }
               O.t = window['set' + O.provider](function() {
                   // try only when the connection state is 0
-                  Oneline.connector.connect();
-
                   if (Oneline.signalStop
                      || O.socket.readyState === 2
                      || O.socket.readyState === 3) {
                       return O.connector.disconnect();
                   }
 
-                  O.running = 1;
                   var c = 0, m_ = {}, m ={} ; 
                   /* this should be communative
                    * and not
                    */
                   for (var i in O.objects) {
+                      if (O.objects[parseInt(i)].signature === O.signature) {
                       O.objects[parseInt(i)].run(m);
                       O.oot = window['set' + O.runner](function() {
 
                           /* check if the prev
                            */ 
-                          if (c !== 0 && O.objects[c - 1].state !== 1)
-                              return;
-
-                          if (typeof O.objects[c] !== 'object')
-                              return;
-
-                          if (O.objects[c].state === 1) {
-                              if (O.objects[c] !== O.lastObjects[O.objects[c].type]
-                                && typeof O.lastObjects[O.objects[c].type] !== 'undefined') {
+                          if (O.objects.length > 1) {
+                            if (typeof O.objects[c - 1]  !== 'undefined') {
+                              if (c !== 0 && O.objects[c - 1].state !== 1) {
                                   return;
-                                }
+      
+                              if (typeof O.objects[c] !== 'object')
+                                  return;
 
-                              m = collect(m, O.objects[c].m);
+                              if (O.objects[c].state === 1) {
 
-                              c ++;
+                                  m = collect(m, O.objects[c].m);
 
+                                  c ++;
+
+                                  window['clear' + O.runner](O.oot);
+                                 }
+                         
+                              }
+                            }
+                          } else {
+                              m  = collect(m,O.objects[c].m);
+                              c++;
                               window['clear' + O.runner](O.oot);
-                          }
+                          } 
 
                       }, 1);
+                    }
                   }
 
                   O.ooot = window['set' + O.runner](function() {
@@ -631,12 +627,13 @@
                             m_.timestamp = t;
                             m_.connection_uuid = O.connection_uuid;
 
+                            if (t  > Oneline.after) {
                             O.socket.send(O.interop.stringify(m_));
 
                             //if (typeof O.callback === 'function')
                             //    O.callback(m_);
 
-                            O.running = 0;
+                            }
                           }
 
                           window['clear' + O.runner](O.ooot);
@@ -654,8 +651,18 @@
     *
     * @class
     */
-   Oneline.sound = function(options) {
+   Oneline.sound = function(options, ready) {
       Oneline.sound.options = options;
+      if (!ready) {
+          Oneline.clearCurrent(this);
+          var obj = clone(Oneline.sound(options,1));
+          obj.signature = Oneline.signature;
+          Oneline.objects.push(
+            obj
+          );
+      }
+       
+      
 
       return {
           run: function(m)
@@ -696,7 +703,7 @@
           if (O.socket.readyState === 0 || O.socket.readyState === 1)
             return;
 
-          return O.setup(O.settings);
+          return O.setup(O.settings, false);
       },
       /* disconnect from the 
        * socket

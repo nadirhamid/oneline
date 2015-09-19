@@ -945,9 +945,9 @@ class storage(object):
         cherrypy.log("registering the database and table under: %s, %s" % (_OL_DB.__str__(), _OL_TABLE))
         self.db.commit()
 
-    def query(self, queries):
+    def query(self, queries, **kwargs):
         self.db.commit()
-        result = self.db(queries).select()
+        result = self.db(queries).select(**kwargs)
         self.db.commit()
         return  result
 
