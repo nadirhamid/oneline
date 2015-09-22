@@ -247,6 +247,13 @@ without having websocket support in the target browser
 
 - bug fixes for controllers
 
+0.8.6
+------------------------------------------------------------
+
+ -  fix db_port issue. 
+
+
+
 
 
 

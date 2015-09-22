@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*- import argparse 
-import json
+# -*- coding: utf-8 -*- import argparse import json
 import bsonlib
 import operator
 import hashlib
@@ -735,8 +734,10 @@ class server(object):
               ## do storage to create the tables needed
               try:
                 stor = storage(conf=module_name)
-              except: ##tables could not be  created
-                pass
+              except Exception,e: ##tables could not be  created
+                print "Couldnt connect to database for module: "  +  module_name
+                print  e
+    
             else:
               continue ## no class found
       
@@ -780,7 +781,7 @@ class storage(object):
                  username='root', 
                  password='', 
                  database='', 
-                 port='',
+                 port='3306',
                  caller='',
                  conf='',
                  silent=False,
@@ -831,6 +832,7 @@ class storage(object):
         db_type = config['db_type']
         username= config['db_user'] if 'db_user' in config.keys() else username
         password =config['db_pass'] if 'db_pass' in config.keys() else password
+        port =config['db_port'] if 'db_port' in config.keys() else port
         #table = config['db_table']  if 'db_table' in config.keys() else table
         database =config['db_database']
         db_host =config['db_host']
@@ -850,9 +852,9 @@ class storage(object):
             _OL_DB = self.db = DAL('sqlite://' + database + '.db', migrate_enabled=False, folder=dbfolder, auto_import=True,pool_size=None)    
         else:   
             if silent:
-              _OL_DB = self.db = DAL(db_type + '://' + username + ':' + password + '@' + db_host + '/' + database,pool_size=None)
+              _OL_DB = self.db = DAL(db_type + '://' + username + ':' + password + '@' + db_host + ':' + port + '/' + database,pool_size=None)
             else:
-              _OL_DB = self.db = DAL(db_type + '://' + username + ':' + password + '@' + db_host + '/' + database, migrate_enabled=False,pool_size=None)
+              _OL_DB = self.db = DAL(db_type + '://' + username + ':' + password + '@' + db_host + ':' + port + '/' + database, migrate_enabled=False,pool_size=None)
 
         
         if silent:
