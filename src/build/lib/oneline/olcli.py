@@ -412,6 +412,9 @@ def {0}_restart():
 
                     os.remove("/usr/local/oneline/modules/" + module + '.py')
                     os.remove("/usr/local/oneline/conf/" + module  + '.conf')
+                    os.remove("/usr/local/oneline/controllers/" + module + "_controller.py")
+                    os.remove("/usr/local/oneline/seeds/" + module)
+            
                     print "Done all files for: {0} module have been removed".format(module)
                 except:
                     print "One or more files could not be deleted.. please make sure the files are on path.."
@@ -425,6 +428,7 @@ def {0}_restart():
                 moduleFile = __import__(module + "_controller")
 
                 fn = getattr(moduleFile, module +"_" + self.controllerAction)
+                knownControllers =  ['init', 'clean', 'restart', 'stop']
                 if fn:
                   status = fn()
                   _OL_CURRENT_APP = module

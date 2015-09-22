@@ -451,6 +451,13 @@ def ready():
     
      
 
+def db_by_module(module_name):
+  stor= storage(conf=module_name + ".conf", silent=False)
+  if stor:
+    return stor.get()['db']
+    
+
+
  
 def db(caller_object):
   #global _OL_DB
