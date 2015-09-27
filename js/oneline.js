@@ -76,10 +76,18 @@
     Oneline.signature = Oneline.uuid();
   };
   // one time
-  Oneline.once =   function(message) {
+  Oneline.once =   function(event_type, message) {
            var m_ = {}; 
            var packet = {};        
-            packet[message.obj]  = message.data;
+    
+
+            message['type'] =  event_type;
+            // TODO no backwards captability should be present, in next version
+            for(var i in Object.keys(message)) {
+            message['data'][message[i]] = message;
+            delete message[i];
+            }
+            packet["generic"]  = message;
 
                           t = Date.now();
                           m_.packet = packet; 
