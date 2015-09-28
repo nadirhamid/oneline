@@ -15,6 +15,7 @@ import os
 import re
 import sys
 import cherrypy
+import requests
 import uuid
 import random as _random
 import time as _time
@@ -149,8 +150,15 @@ def scan_config(caller):
       for i in lines:
         if not re.findall("^#", i):
           match = re.findall(keyword, i)
+        
           if match:
-            config[match[0][0]] = match[0][1]
+            if match[0][0] == "microservice":
+              if not "microservice" in config.keys():
+                config['microservice']  = [match[0][1]]
+              else:
+                config['microservice'].append(match[0][1])
+            else:
+              config[match[0][0]] = match[0][1]
         
     return config
 
@@ -237,6 +245,19 @@ def execute(single=False,last=True, serialized=True):
   return result
  
 
+## network API layer to
+## a connection associatwed wwith ol.module
+  
+class MicroService(object):
+  def __init__(self,endpoint):
+    self.endpoint  =endpoint
+    self.http_connection =requests
+  def receiver(self,data):
+    self.http_connection.post(self.endpoint + "/" + "receiver", data=data)
+  def start(self,data):
+    self.http_connection.post(self.endpoint + "/" +"start", data=data)
+  def end(self,data):
+    self.http_connection.post(self.endpoint +"/" +"end",data=data)
 
 
 class request(object):
@@ -1081,6 +1102,11 @@ class pipeline(object):
         self.callerObject = callerObject
         self.config = config
         self.blob = []
+        if 'microservice' in config.keys():
+          self.micro_service = []
+          for i in config['microservice']:
+            self.micro_service.append(config['microservice'][i])
+      
        
         if not 'broadcast' in self.config.keys() or self.config['broadcast'] == 'singular':
             self.callerObject.unique = uuid.uuid4().__str__()
@@ -1285,12 +1311,22 @@ class pipeline(object):
             
             m = dict(data=[], status=u'ok', response=r, connection_uuid=unicode(connection_uuid), uuid=unicode(uuid), timestamp_request=int(timestamp), timestamp_response=_time.time())
 
+        
         bytes = map(ord, bsonlib.dumps(m)).__str__()
+        if 'microservice' in  self.config.keys():
+          bytes_json =  json.dumps(m)
 
         for i in client:
             ## trying to send to a dead client will not work
             try:
-              i.send(bytes)   
+              if self.micro_service:
+                for i in self.micro_service:
+                  ms = MicroService(i)
+                  ms.receiver(bytes_json)
+              else:
+                i.send(bytes)   
+              
+      
             except:
               #self.logger.append(dict(addr='',object=self.__str__(), time=_time.time(), message="Lost a connection, message was not sent"))
               ## this should not happen when the module's stop function is called
