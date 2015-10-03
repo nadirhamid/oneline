@@ -102,7 +102,7 @@ toremove =[
       "oneline" 
 ]
 for i in toremove:
-  if os.path.isfile(fpath + i):
+  if os.path.isfile(fpath + i) or os.path.islink(fpath  +  i):
     try:
       os.remove(fpath + i)
     except:
