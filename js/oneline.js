@@ -81,12 +81,18 @@
            var packet = {};        
     
 
+            if (typeof event_type === "object") {
+              packet[event_type.obj]  = {};
+              packet[event_type.obj]['type']  =  event_type.data.type;
+              packet[event_type.obj]['data'] = event_type.data.data;
+            } else {
             message['type'] =  event_type;
             // TODO no backwards captability should be present, in next version
             for(var i in Object.keys(message)) {
             message['data'][message[i]] = message;
             delete message[i];
             }
+           }
             packet["generic"]  = message;
 
                           t = Date.now();
