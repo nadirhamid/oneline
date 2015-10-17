@@ -1,7 +1,7 @@
+import re
 import sys 
 import os
 import shutil
-import re
 import cherrypy
 import psutil
 from oneline import ol
@@ -25,6 +25,7 @@ statusTrans = {
 class Runtime(object):
     def __init__(self, args):
         global statusTrans
+        
         self.args = args
         self.status  = False
         self.type = 'SERVER'
@@ -119,7 +120,7 @@ class Runtime(object):
   
     """ based on second option """
     def get_type(self):
-      import re
+      
       opt = self.secondopt
       withouthyphen = re.sub("\-\-", "", opt)
       if withouthyphen in self.serveropts:
@@ -127,9 +128,9 @@ class Runtime(object):
       return "CLIENT"
 
     def get_seed(self):
+      
       if os.path.isfile(os.getcwd()+"/.oneline.seed"): 
         seedFile = open(os.getcwd() +"/.oneline.seed", "r").read()
-        import re
         contents = re.findall("ONELINE_MODULE=(.*)", seedFile)
         if contents:
           return contents[0]
@@ -163,6 +164,7 @@ class Runtime(object):
             print "Oneline UI running on {0}:{1}".format(self.ip, self.port)
             
         if 'list' in dir(self):
+            
             print "List of all modules"
             modpath = "/usr/local/oneline/modules/"
             mods = os.listdir(modpath)
@@ -256,11 +258,11 @@ class Runtime(object):
                 controllerpath = "/usr/local/oneline/controllers/"
                 seedpath = "/usr/local/oneline/seeds/"
                 os.chdir(confpath)
-   
+  
+                
                 if os.path.isfile(path_of_mod +"/" +".oneline.seed"):
                   print "You already have a module in this directory. Either remove it or choose another directory"
                   currentseed = open(path_of_mod +"/" + ".oneline.seed", "r").read()
-                  import re 
                   matches = re.findall("ONELINE_MODULE=(.*)", currentseed)
                   if matches:
                     print "Module name is: %s" % (matches[0])
