@@ -1102,11 +1102,6 @@ class pipeline(object):
         self.callerObject = callerObject
         self.config = config
         self.blob = []
-        if 'microservice' in config.keys():
-          self.micro_service = []
-          for i in config['microservice']:
-            self.micro_service.append(config['microservice'][i])
-      
        
         if not 'broadcast' in self.config.keys() or self.config['broadcast'] == 'singular':
             self.callerObject.unique = uuid.uuid4().__str__()
@@ -1319,12 +1314,7 @@ class pipeline(object):
         for i in client:
             ## trying to send to a dead client will not work
             try:
-              if self.micro_service:
-                for i in self.micro_service:
-                  ms = MicroService(i)
-                  ms.receiver(bytes_json)
-              else:
-                i.send(bytes)   
+              i.send(bytes)   
               
       
             except:
