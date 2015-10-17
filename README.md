@@ -158,8 +158,6 @@ Oneline uses web2py's DAL and supports the following databases:
   - SQLite & SpatiaLite
   - MySQL
   - Postgres
-  - MongoDB
-  - CouchDB (experimental)
 
 Other libraries include
 
