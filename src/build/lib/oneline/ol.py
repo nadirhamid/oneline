@@ -305,8 +305,13 @@ class response(object):
       newDict[i] =getattr(self,i)
     return unicodeAll(newDict)
 
-def unicodeReplace(str):
-  return unicodeReplace(str, errors="replace")
+def unicodeReplace(theString):
+  ##do not reencode already unicode strings, this will create an
+  ## error with errors="replace" mode
+  if isinstance(theString,str) and not isinstance(theString, unicode):
+
+    return unicode(theString, errors="replace")
+  return theString
 
 def unicodeAll(dictionaryorlist):
   if isinstance(dictionaryorlist,list):
@@ -316,7 +321,7 @@ def unicodeAll(dictionaryorlist):
       if isinstance(dictionaryorlist[i], dict):
         dictionaryorlist[i] = unicodeAll(dictionaryorlist[i])
       if isinstance(dictionaryorlist[i], str):
-        dictionaryorlist[i] = unicodeReplace(decodedstr)
+        dictionaryorlist[i] = unicodeReplace(dictionaryorlist[i])
       if isinstance(dictionaryorlist[i], int):
         dictionaryorlist[i] = int(dictionaryorlist[i])
       if isinstance(dictionaryorlist[i],long):
@@ -326,18 +331,19 @@ def unicodeAll(dictionaryorlist):
   if isinstance(dictionaryorlist,dict):
       keys = dictionaryorlist.keys()
       for i in keys:
+        keyUnicode = unicodeReplace(i)
         if isinstance(dictionaryorlist[i], list):
-          dictionaryorlist[unicodeReplace(i)] = unicodeAll(dictionaryorlist[i])
+          dictionaryorlist[keyUnicode] = unicodeAll(dictionaryorlist[i])
         if isinstance(dictionaryorlist[i], dict):
-          dictionaryorlist[unicodeReplace(i)] = unicodeAll(dictionaryorlist[i])
+          dictionaryorlist[keyUnicode] = unicodeAll(dictionaryorlist[i])
         if isinstance(dictionaryorlist[i], str):
-          dictionaryorlist[unicodeReplace(i)] = unicodeReplace(dictionaryorlist[i],errors="replace")
+          dictionaryorlist[keyUnicode] = unicodeReplace(dictionaryorlist[i])
         if isinstance(dictionaryorlist[i], int):
-          dictionaryorlist[unicodeReplace(i)] = int(dictionaryorlist[i])
+          dictionaryorlist[keyUnicode] = int(dictionaryorlist[i])
         if isinstance(dictionaryorlist[i], long):
-          dictionaryorlist[unicodeReplace(i)]  = long(dictionaryorlist[i])
+          dictionaryorlist[keyUnicode] = long(dictionaryorlist[i])
         if isinstance(dictionaryorlist[i], float):
-          dictionaryorlist[unicodeReplace(i)] = float(dictionaryorlist[i])
+          dictionaryorlist[keyUnicode] = float(dictionaryorlist[i])
   return dictionaryorlist
     
 
