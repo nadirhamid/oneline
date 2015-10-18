@@ -42,11 +42,9 @@
   Oneline.port = Oneline.port || 9000;
   Oneline.protoline = Oneline.protoline || [];
   Oneline.objects = Oneline.objects || [];
-  Oneline.lastResponse = "";
   Oneline.after = Date.now();
   Oneline.signature = "";
-  Oneline.readyFnCalled = false;
-  Oneline.updated = false;
+  Oneline.readyIntervalFreq = 100;  // 100ms
 
   /**
    * accept after a given time
@@ -75,6 +73,20 @@
   Oneline.newSignature = function() {
     Oneline.signature = Oneline.uuid();
   };
+  Oneline.joinOrNew =  function(obj) {
+     var needsMerge = 0;
+     for (var i in Oneline.objects) {
+        if (Oneline.objects[i].type === obj.type) {
+            Oneline.objects[i] = obj;
+            Oneline.objects[i].state = 0; 
+            needsMerge = 1;
+         }
+      }
+      if (!needsMerge) {
+          Oneline.objects.push(obj);
+      }
+    };
+           
   // one time
   Oneline.once =   function(event_type, message) {
            var m_ = {}; 
@@ -109,13 +121,25 @@
         Oneline.socket.send(Oneline.interop.stringify(m_));
   };
 
+  Oneline.alwaysConnect  = function()  {  // always listen for the server, evenm when disconnected
+      Oneline.alwaysConnectInterval = setInterval(function() {
+            if (Oneline.socket.readyState ===2  || Oneline.socket.readyState === 3) {
+                Oneline.connector.connect();
+            } else { // wait
+            }
+      }, 0);
+   };
   Oneline.ready = function(callback) {
       var readyInterval= setInterval(function() {
           if (Oneline.socket.readyState === 1) {
             callback();
             clearInterval(readyInterval);
+          } else {
+            // try to reconnect
+            
+           Oneline.connector.connect();
           }
-      }, 500);
+      }, Oneline.readyIntervalFreq);
   };
 
   Oneline.clearCurrent = function(instance) {
@@ -151,7 +175,7 @@
       }
       options.server = options.module || options.server;
     
-
+      Oneline.settings.alwaysConnect  = typeof Oneline.settings.alwaysConnect === 'undefined'  ? false  : (Oneline.settings.alwaysConnect ? true : false);
       if (options.server.match(/ws\:\/\//))
         Oneline.settings.server = options.server;
       else
@@ -318,12 +342,9 @@
   Oneline.echo = Oneline.echo = function(options, ready) {
     Oneline.echo.options = options;
     if (!ready) {
-    Oneline.clearCurrent(Oneline.echo);
     var obj  = clone(Oneline.echo(options,1));
     obj.signature = Oneline.signature;
-    Oneline.objects.push(
-        obj 
-    );
+    Oneline.joinOrNew(obj);
     }
         
     
@@ -349,12 +370,9 @@
       Oneline.geolocation.type = "geolocation";
       Oneline.geolocation.options = options;
       if (!ready) {
-      Oneline.clearCurrent(Oneline.geo);
       var obj =   clone(Oneline.geolocation(options,1));
       obj.signature = Oneline.signature;
-      Oneline.objects.push_back(
-        obj
-      );
+      Oneline.joinOrNew(obj);
       }
 
       return {
@@ -393,12 +411,9 @@
       Oneline.event.options = options;
       Oneline.event.type = "event";
       if (!ready) {
-        Oneline.clearCurrent(Oneline.event);
         var obj = clone(Oneline.event(options,1));
         obj.signature = Oneline.signature;
-        Oneline.objects.push(
-          obj
-        );
+        Oneline.joinOrNew(obj);
       }
       return {
 
@@ -430,12 +445,9 @@
 
     if (!ready) {
      
-      Oneline.clearCurrent(Oneline.generic);
       var obj = clone(Oneline.generic(options,1));
       obj.signature = Oneline.signature;
-      Oneline.objects.push(
-        obj
-      );
+      Oneline.joinOrNew(obj);
     }
 
       return {
@@ -477,12 +489,9 @@
       Oneline.time.options = options;
       
       if (!ready) {
-        Oneline.clearCurrent(Oneline.time);
         var obj = clone(Oneline.time(options,1));
         obj.signature = Oneline.signature;
-        Oneline.objects.push(
-          obj
-        );
+        Oneline.joinOrNew(obj);
       }
 
       return {
@@ -507,12 +516,9 @@
       Oneline.random.type = "random";
       Oneline.random.options = options;
       if (!ready) { 
-        Oneline.clearCurrent(Oneline.random);
         var obj = clone(Oneline.random(options,1));
         obj.signature = Oneline.signature;
-        Oneline.objects.push(
-            obj
-        );
+        Oneline.joinOrNew(obj);
       }
 
       return {
@@ -572,12 +578,6 @@
           {
               Oneline.signalStop  = false;
               Oneline.connector.connect();
-              if (Oneline.socket.readyState !== 0) { // wait for a connection
-                  setTimeout(function() {
-                   return Oneline.pipeline(Oneline.callback).run();
-                  }, 100);
-                  return;
-              }
               O.t = window['set' + O.provider](function() {
                   // try only when the connection state is 0
                   if (Oneline.signalStop
@@ -668,12 +668,9 @@
    Oneline.sound = function(options, ready) {
       Oneline.sound.options = options;
       if (!ready) {
-          Oneline.clearCurrent(this);
           var obj = clone(Oneline.sound(options,1));
           obj.signature = Oneline.signature;
-          Oneline.objects.push(
-            obj
-          );
+          Oneline.joinOrNew(obj);
       }
        
       

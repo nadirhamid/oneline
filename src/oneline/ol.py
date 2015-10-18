@@ -1,4 +1,7 @@
-# -*- coding: utf-8 -*- import argparse import json
+# -*- coding: utf-8 -*- 
+
+import argparse 
+import json
 import bsonlib
 import operator
 import hashlib
@@ -302,6 +305,9 @@ class response(object):
       newDict[i] =getattr(self,i)
     return unicodeAll(newDict)
 
+def unicodeReplace(str):
+  return unicodeReplace(str, errors="replace")
+
 def unicodeAll(dictionaryorlist):
   if isinstance(dictionaryorlist,list):
     for i in range(0,len(dictionaryorlist)):
@@ -310,24 +316,28 @@ def unicodeAll(dictionaryorlist):
       if isinstance(dictionaryorlist[i], dict):
         dictionaryorlist[i] = unicodeAll(dictionaryorlist[i])
       if isinstance(dictionaryorlist[i], str):
-        dictionaryorlist[i] = unicode(dictionaryorlist[i])
+        dictionaryorlist[i] = unicodeReplace(decodedstr)
       if isinstance(dictionaryorlist[i], int):
         dictionaryorlist[i] = int(dictionaryorlist[i])
+      if isinstance(dictionaryorlist[i],long):
+        dictionaryorlist[i]  = long(dictionaryorlist[i])
       if isinstance(dictionaryorlist[i], float):
         dictionaryorlist[i] = float(dictionaryorlist[i])
   if isinstance(dictionaryorlist,dict):
       keys = dictionaryorlist.keys()
       for i in keys:
         if isinstance(dictionaryorlist[i], list):
-          dictionaryorlist[unicode(i)] = unicodeAll(dictionaryorlist[i])
+          dictionaryorlist[unicodeReplace(i)] = unicodeAll(dictionaryorlist[i])
         if isinstance(dictionaryorlist[i], dict):
-          dictionaryorlist[unicode(i)] = unicodeAll(dictionaryorlist[i])
+          dictionaryorlist[unicodeReplace(i)] = unicodeAll(dictionaryorlist[i])
         if isinstance(dictionaryorlist[i], str):
-          dictionaryorlist[unicode(i)] = unicode(dictionaryorlist[i])
+          dictionaryorlist[unicodeReplace(i)] = unicodeReplace(dictionaryorlist[i],errors="replace")
         if isinstance(dictionaryorlist[i], int):
-          dictionaryorlist[unicode(i)] = int(dictionaryorlist[i])
+          dictionaryorlist[unicodeReplace(i)] = int(dictionaryorlist[i])
+        if isinstance(dictionaryorlist[i], long):
+          dictionaryorlist[unicodeReplace(i)]  = long(dictionaryorlist[i])
         if isinstance(dictionaryorlist[i], float):
-          dictionaryorlist[unicode(i)] = float(dictionaryorlist[i])
+          dictionaryorlist[unicodeReplace(i)] = float(dictionaryorlist[i])
   return dictionaryorlist
     
 
@@ -681,12 +691,12 @@ class server(object):
                     SERVERS['host']: self.host,
                     SERVERS['port']: self.port,
                     SERVERS['path']: self.path
-                    #SERVERS['ssl_key']: unicode(config['ssl_key']),
-                    #SERVERS['ssl_certificate']: unicode(config['ssl_certificate'])
+                    #SERVERS['ssl_key']: unicodeReplace(config['ssl_key']),
+                    #SERVERS['ssl_certificate']: unicodeReplace(config['ssl_certificate'])
               })
               #cherrypy.server.ssl_module = 'builtin'
-              cherrypy.server.ssl_private_key = unicode(config['ssl_key'])
-              cherrypy.server.ssl_certificate = unicode(config['ssl_certificate'])
+              cherrypy.server.ssl_private_key = unicodeReplace(config['ssl_key'])
+              cherrypy.server.ssl_certificate = unicodeReplace(config['ssl_certificate'])
             else:
               cherrypy.log("If you want to use SSL and WSS please specifiy 'ssl_certificate' and 'ssl_key' in Main.conf")
               exit(1)
@@ -1135,9 +1145,9 @@ class pipeline(object):
     """
     def broadcast(self, message):
         if not isinstance(message, dict):
-            message = dict(message=unicode(message))
+            message = dict(message=unicodeReplace(message))
 
-        bytes = map(ord, bsonlib.dumps(message)).__str__()
+        bytes = unicodeReplace(map(ord, bsonlib.dumps(message)).__str__())
         cherrypy.engine.publish('websocket-broadcast', bytes)
 
     """
@@ -1237,8 +1247,12 @@ class pipeline(object):
 
             c += 1
 
-        if len(self._objs) >  0 and len(m) > 0:  
-          m = [dict(i.items() + [('confidence', 1)]) for i in m]
+        if len(self._objs)  > 0 and len(m) > 0:
+        #do we have the confidence
+          if not 'confidence' in m[0]:
+            for i in range(0,len(m)):
+              m[i]['confidence']  = 1
+            #m  = [dict(i) + [dict(confidence=1)] i for i in m]
 
         """
         by now m should be a nodecollection.
@@ -1301,13 +1315,17 @@ class pipeline(object):
        
         if len(m) > 0 and len(self._objs) > 0:
             data = unicodeAll(m) 
-            m = dict(data=m, status=u'ok', response=r, connection_uuid=unicode(connection_uuid), uuid=unicode(uuid), timestamp_request=int(timestamp), timestamp_response=_time.time())
+            m = dict(data=m, status=u'ok', response=unicodeAll(r), connection_uuid=unicodeReplace(connection_uuid), uuid=unicodeReplace(uuid), timestamp_request=int(timestamp), timestamp_response=_time.time())
         else:
             
-            m = dict(data=[], status=u'ok', response=r, connection_uuid=unicode(connection_uuid), uuid=unicode(uuid), timestamp_request=int(timestamp), timestamp_response=_time.time())
+            m = dict(data=[], status=u'ok', response=unicodeAll(r), connection_uuid=unicodeReplace(connection_uuid), uuid=unicodeReplace(uuid), timestamp_request=int(timestamp), timestamp_response=_time.time())
+       
+        try:  
+          bytes = map(ord, bsonlib.dumps(m)).__str__()
+        except Exception, e:
+          print e.__str__()
 
-        
-        bytes = map(ord, bsonlib.dumps(m)).__str__()
+
         if 'microservice' in  self.config.keys():
           bytes_json =  json.dumps(m)
 
@@ -1393,7 +1411,7 @@ class echo(object):
         _OL_DB = self.storage.get()['db']
         _OL_TABLE = self.storage.get()['table']
         limit = message['packet']['echo']['limit']
-        if not 'data' in message.keys():
+        if len(message['data']) == 0:
             rows = _OL_DB(getattr(_OL_DB, _OL_TABLE)).select()
             return rows.as_list() 
         else:
@@ -1490,7 +1508,7 @@ class geolocation(object):
             self.errors.append('This table does have a longitude column')
             raise NameError('ONELINE: This table does have a longitude column')
 
-        if not 'data' in message.keys():
+        if len(message['data']) == 0:
             q1 = []
             q2 = []
             q3 = []
@@ -1645,7 +1663,7 @@ class sound(object):
         descriptor = str(message['packet']['sound']['description'])
         field = str(message['packet']['sound']['field'])
 
-        if not 'data' in message.keys():
+        if len(message['data']) == 0:
 
             if not field in getattr(_OL_TABLE, 'fields'):
                 self.errors.append('This table did not have a: ' + field + ' field')
@@ -1718,7 +1736,7 @@ class random(object):
         cherrypy.log("Entering random module with:")
         cherrypy.log(message.__str__())
         cherrypy.log("Database is:%s, table is  %s"  %(_OL_DB.__str__(),_OL_TABLE))
-        if not 'data' in message.keys():
+        if len(message['data']) == 0:
             queries = []
             queries.append(getattr(_OL_DB, _OL_TABLE))
 
@@ -1765,7 +1783,7 @@ class time(object):
             self.errors.append('Start time must be lower than end time ' + ' received (start: ' + start + ')')
             raise NameError('ONELINE: start time higher than end time in time')
 
-        if not 'data' in message.keys():
+        if len(message['data']) == 0:
             if not 'stime' in getattr(_OL_DB, _OL_TABLE).fields:
                 self.errors.append('This table does have a stime column')
                 raise NameError('ONELINE: This table does have a stime column')
@@ -1869,7 +1887,7 @@ class event(object):
             else:
                 opts.append(dict(key=k, value=v['value'], op=v['op']))
 
-        if not 'data' in message.keys():
+        if len(message['data']) == 0:
 
             for i in opts:
 
