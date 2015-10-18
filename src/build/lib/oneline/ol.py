@@ -258,7 +258,7 @@ class MicroService(object):
   def receiver(self,data):
     self.http_connection.post(self.endpoint + "/" + "receiver", data=data)
   def start(self,data):
-    self.http_connection.post(self.endpoint + "/" +"start", data=data)
+    self.http_connection.post(self.endpoint + "/" +"start", data=data) 
   def end(self,data):
     self.http_connection.post(self.endpoint +"/" +"end",data=data)
 
@@ -268,6 +268,9 @@ class request(object):
     self.settings = []
     for i in requestCurrent.keys(): 
       self.set(i, requestCurrent[i])
+  ##backwards compat
+  def __getitem__(self,key):
+    return self.get(key)
   def set(self,thing,value):
     self.settings.append(thing)
     setattr(self,thing,value)
@@ -395,6 +398,13 @@ def controller_init(sql='',startserver=False, name=''):
 
   if callername['function']:
     caller = re.sub("_init$",  "", callername['function'])
+    ##premature exit on False for sql. This would mean there is no SQL to commit
+    ##(only) when no database is being used
+    if isinstance(sql,boolean) and sql ==  False:
+      if startserver:
+        olcli.Runtime(['olcli.py', 'start'])
+        return True
+        
     db = storage(conf=caller + ".conf", silent=True).get()['db']
     db.commit()
     
