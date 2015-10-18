@@ -306,7 +306,7 @@ class response(object):
     return unicodeAll(newDict)
 
 def unicodeReplace(str):
-  return unicodeReplace(str, errors="replace")
+  return unicode(str, errors="replace")
 
 def unicodeAll(dictionaryorlist):
   if isinstance(dictionaryorlist,list):

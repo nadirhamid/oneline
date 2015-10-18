@@ -305,6 +305,9 @@ class response(object):
       newDict[i] =getattr(self,i)
     return unicodeAll(newDict)
 
+def unicodeReplace(str):
+  return unicodeReplace(str, errors="replace")
+
 def unicodeAll(dictionaryorlist):
   if isinstance(dictionaryorlist,list):
     for i in range(0,len(dictionaryorlist)):
@@ -313,9 +316,7 @@ def unicodeAll(dictionaryorlist):
       if isinstance(dictionaryorlist[i], dict):
         dictionaryorlist[i] = unicodeAll(dictionaryorlist[i])
       if isinstance(dictionaryorlist[i], str):
-        print "Incoming string is: %s"  %(dictionaryorlist[i]) 
-        decodedstr = dictionaryorlist[i].decode("utf-8").encode("utf-8")
-        dictionaryorlist[i] = unicode(decodedstr)
+        dictionaryorlist[i] = unicodeReplace(decodedstr)
       if isinstance(dictionaryorlist[i], int):
         dictionaryorlist[i] = int(dictionaryorlist[i])
       if isinstance(dictionaryorlist[i],long):
@@ -326,19 +327,17 @@ def unicodeAll(dictionaryorlist):
       keys = dictionaryorlist.keys()
       for i in keys:
         if isinstance(dictionaryorlist[i], list):
-          dictionaryorlist[unicode(i)] = unicodeAll(dictionaryorlist[i])
+          dictionaryorlist[unicodeReplace(i)] = unicodeAll(dictionaryorlist[i])
         if isinstance(dictionaryorlist[i], dict):
-          dictionaryorlist[unicode(i)] = unicodeAll(dictionaryorlist[i])
+          dictionaryorlist[unicodeReplace(i)] = unicodeAll(dictionaryorlist[i])
         if isinstance(dictionaryorlist[i], str):
-          print "Incoming string is::%s" % (dictionaryorlist[i])
-          decodedstr = dictionaryorlist[i].decode("utf-8").encode("utf-8")
-          dictionaryorlist[unicode(i)] = unicode(decodedstr)
+          dictionaryorlist[unicodeReplace(i)] = unicodeReplace(dictionaryorlist[i],errors="replace")
         if isinstance(dictionaryorlist[i], int):
-          dictionaryorlist[unicode(i)] = int(dictionaryorlist[i])
+          dictionaryorlist[unicodeReplace(i)] = int(dictionaryorlist[i])
         if isinstance(dictionaryorlist[i], long):
-          dictionaryorlist[unicode(i)]  = long(dictionaryorlist[i])
+          dictionaryorlist[unicodeReplace(i)]  = long(dictionaryorlist[i])
         if isinstance(dictionaryorlist[i], float):
-          dictionaryorlist[unicode(i)] = float(dictionaryorlist[i])
+          dictionaryorlist[unicodeReplace(i)] = float(dictionaryorlist[i])
   return dictionaryorlist
     
 
@@ -692,12 +691,12 @@ class server(object):
                     SERVERS['host']: self.host,
                     SERVERS['port']: self.port,
                     SERVERS['path']: self.path
-                    #SERVERS['ssl_key']: unicode(config['ssl_key']),
-                    #SERVERS['ssl_certificate']: unicode(config['ssl_certificate'])
+                    #SERVERS['ssl_key']: unicodeReplace(config['ssl_key']),
+                    #SERVERS['ssl_certificate']: unicodeReplace(config['ssl_certificate'])
               })
               #cherrypy.server.ssl_module = 'builtin'
-              cherrypy.server.ssl_private_key = unicode(config['ssl_key'])
-              cherrypy.server.ssl_certificate = unicode(config['ssl_certificate'])
+              cherrypy.server.ssl_private_key = unicodeReplace(config['ssl_key'])
+              cherrypy.server.ssl_certificate = unicodeReplace(config['ssl_certificate'])
             else:
               cherrypy.log("If you want to use SSL and WSS please specifiy 'ssl_certificate' and 'ssl_key' in Main.conf")
               exit(1)
@@ -1146,9 +1145,9 @@ class pipeline(object):
     """
     def broadcast(self, message):
         if not isinstance(message, dict):
-            message = dict(message=unicode(message))
+            message = dict(message=unicodeReplace(message))
 
-        bytes = unicode(map(ord, bsonlib.dumps(message)).__str__())
+        bytes = unicodeReplace(map(ord, bsonlib.dumps(message)).__str__())
         cherrypy.engine.publish('websocket-broadcast', bytes)
 
     """
@@ -1316,10 +1315,10 @@ class pipeline(object):
        
         if len(m) > 0 and len(self._objs) > 0:
             data = unicodeAll(m) 
-            m = dict(data=m, status=u'ok', response=unicodeAll(r), connection_uuid=unicode(connection_uuid), uuid=unicode(uuid), timestamp_request=int(timestamp), timestamp_response=_time.time())
+            m = dict(data=m, status=u'ok', response=unicodeAll(r), connection_uuid=unicodeReplace(connection_uuid), uuid=unicodeReplace(uuid), timestamp_request=int(timestamp), timestamp_response=_time.time())
         else:
             
-            m = dict(data=[], status=u'ok', response=unicodeAll(r), connection_uuid=unicode(connection_uuid), uuid=unicode(uuid), timestamp_request=int(timestamp), timestamp_response=_time.time())
+            m = dict(data=[], status=u'ok', response=unicodeAll(r), connection_uuid=unicodeReplace(connection_uuid), uuid=unicodeReplace(uuid), timestamp_request=int(timestamp), timestamp_response=_time.time())
        
         try:  
           bytes = map(ord, bsonlib.dumps(m)).__str__()
