@@ -37,7 +37,7 @@ class Runtime(object):
         self.port = 9000 
         self.ip = "127.0.0.1"
         self.serveropts = ['start', 'stop', 'restart', 'start_server', 'stop_server', 'start_forwarder']
-        self.clientopts =['init', 'pack', 'remove', 'controller','list']
+        self.clientopts =['init', 'pack', 'remove', 'controller','list', 'edit']
         self.controlleractions =['init', 'restart','stop', 'clean']
         a = self.args
         if len(a) == 1:
@@ -92,8 +92,11 @@ class Runtime(object):
                 self.initstream = j 
             if i in ['-d', '--daemon']:
                 self.daemon = True
-            if i in ['-l', '--list']:
+            if i in ['-l', '--list']:  
                 self.list = True
+            if i in ['-e', '--edit']:
+                self.edit = True
+                self.module = j
             if i in ['-v', '--version']:
                 self.version = True
             if i  in ['--controller']:
@@ -162,7 +165,11 @@ class Runtime(object):
             cherrypy.quickstart(SERVER, '')
 
             print "Oneline UI running on {0}:{1}".format(self.ip, self.port)
-            
+           
+        if 'edit' in dir(self):
+          path = "/usr/local/oneline/modules/" +self.module + ".py"
+          os.system("vim {0}".format(path))
+
         if 'list' in dir(self):
             
             print "List of all modules"
@@ -291,7 +298,6 @@ db_pass = '__test__'
 db_database = '__example_edit_me__'
 db_host = '127.0.0.1'
 ol_broadcast = 'singular'
-ol_memcached = 'on'
 
 ==========================================
                 """.format(module_name))

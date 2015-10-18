@@ -400,7 +400,7 @@ def controller_init(sql='',startserver=False, name=''):
     caller = re.sub("_init$",  "", callername['function'])
     ##premature exit on False for sql. This would mean there is no SQL to commit
     ##(only) when no database is being used
-    if isinstance(sql,boolean) and sql ==  False:
+    if isinstance(sql,bool) and sql ==  False:
       if startserver:
         olcli.Runtime(['olcli.py', 'start'])
         return True
