@@ -252,6 +252,16 @@ without having websocket support in the target browser
 
  -  fix db_port issue. 
 
+0.9.0
+------------------------------------------------------------
+
+ - add convinience for Oneline.async. Adds callback support
+ for asynchronous event multiplexing
+ - rewrite some bits in Oneline.js
+ - add async support on server
+ - look over some command line things. Fixes
+
+
 
 
 
