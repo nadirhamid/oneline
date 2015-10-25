@@ -44,6 +44,10 @@
   Oneline.objects = Oneline.objects || [];
   Oneline.after = Date.now();
   Oneline.signature = "";
+  //  list of async data + keys
+  Oneline.asyncs = {};
+  // list of async callbacks. Preserve even when invoked
+  Oneline.asyncCallbacks = {};
   Oneline.readyIntervalFreq = 100;  // 100ms
 
   /**
@@ -70,6 +74,62 @@
      clearTimeout(Oneline.ooot); 
 
   };
+  Oneline.setAsync = function(key, data, fn) {
+     var currentAsyncs = Oneline._getAsyncs();
+     var foundAsync=0;
+     Oneline.asyncCallbacks[key]=fn;
+     for (var i in  currentAsyncs) {
+        if (currentAsyncs[i].key===key) {
+          // reset to initiated
+          currentAsyncs[i].state = 1;
+          foundAsync=1;
+        }
+     }
+    if(!foundAsync) {
+      // on by default
+      currentAsyncs[key]  = { "data": data, state: 1 };
+    }
+    Oneline.asyncs = currentAsyncs;
+  };
+
+  Oneline._getAsyncs = function() {
+      return Oneline.asyncs;
+  };
+  Oneline._getActiveAsyncs = function() {
+     var initial = Oneline._getAsyncs();
+      var full =initial;
+     for (var i in initial) {
+        if (initial[i].state===1) {
+         // good
+        } else {
+           delete  full[i];
+        }
+      }
+      //return Oneline._collectAsyncNames(full);
+      return Object.keys(full);
+    };
+  Oneline._collectAsyncNames = function(listOfAsyncs) {
+      var names = [];
+      for (var i in listOfAsyncs) {
+          names.push(i);
+      }
+      return names;
+    }; 
+  Oneline.callAsync = function(asyncName) {
+    var theAsync = Oneline.getAsync(asyncName);
+    if (theAsync) {
+      Oneline.asyncCallbacks[asyncName](theAsync);
+    }
+  };
+
+  Oneline.getAsync = function(key) {
+     if (typeof Oneline.asyncs[key] !== 'undefined'  && Oneline.asyncs[key].state === 1) {
+         Oneline.asyncs[key].state=0; 
+         return Oneline.asyncs[key].data;
+      }
+      return false;
+  };
+
   Oneline.newSignature = function() {
     Oneline.signature = Oneline.uuid();
   };
@@ -202,6 +262,12 @@
           var data =  Oneline.interop.parse(evt.data);
 
           //if (parseInt(data.timestamp_request) >  parseInt(Oneline.getAfter())) {
+              var collectedAsyncs = [];
+
+              // call all the asyncs
+              for (var i in data.asyncs) {
+                  Oneline.callAsync(data.asyncs[i]);
+              }
               if (typeof Oneline.callback  === 'function') {
               Oneline.callback(data);
               }
@@ -634,9 +700,12 @@
                             /* if we have an agent,
                              * add it to the message
                              */
+
+                      
                             t = Date.now();
                             m_.packet.order = O.order;
                             m_.packet.interop = O.interop;
+                            m_.asyncs = O._getActiveAsyncs();
                             m_.uuid = O.uuid();
                             m_.timestamp = t;
                             m_.connection_uuid = O.connection_uuid;

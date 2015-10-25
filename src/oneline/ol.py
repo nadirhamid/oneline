@@ -268,6 +268,10 @@ class request(object):
     self.settings = []
     for i in requestCurrent.keys(): 
       self.set(i, requestCurrent[i])
+    ## when we have a generic set the type of  result
+    if self.get("generic"):
+      generic = self.get("generic")
+      self.set("type", generic['type'])
   ##backwards compat
   def __getitem__(self,key):
     return self.get(key)
@@ -1226,6 +1230,10 @@ class pipeline(object):
               self._objs = [globals()[i]() for i in m['packet'] if i in OBJS]
 
         p = m['packet']
+        if 'asyncs'  in m.keys():
+          asyncs = m['asyncs']
+        else:
+          asyncs = []
         ## any existing data we need to copy
         ## this is for when the module appends
         ## data. we need to just return it to the client
@@ -1331,10 +1339,10 @@ class pipeline(object):
        
         if len(m) > 0 and len(self._objs) > 0:
             data = unicodeAll(m) 
-            m = dict(data=m, status=u'ok', response=unicodeAll(r), connection_uuid=unicodeReplace(connection_uuid), uuid=unicodeReplace(uuid), timestamp_request=int(timestamp), timestamp_response=_time.time())
+            m = dict(data=m, good=True, asyncs=unicodeAll(asyncs),status=u'ok', response=unicodeAll(r), connection_uuid=unicodeReplace(connection_uuid), uuid=unicodeReplace(uuid), timestamp_request=int(timestamp), timestamp_response=_time.time())
         else:
-            
-            m = dict(data=[], status=u'ok', response=unicodeAll(r), connection_uuid=unicodeReplace(connection_uuid), uuid=unicodeReplace(uuid), timestamp_request=int(timestamp), timestamp_response=_time.time())
+            ## this could be a generic only request, as a result do not deem this an error      
+            m = dict(data=[], good=True, asyncs=unicodeAll(asyncs), status=u'ok', response=unicodeAll(r), connection_uuid=unicodeReplace(connection_uuid), uuid=unicodeReplace(uuid), timestamp_request=int(timestamp), timestamp_response=_time.time())
        
         try:  
           bytes = map(ord, bsonlib.dumps(m)).__str__()
