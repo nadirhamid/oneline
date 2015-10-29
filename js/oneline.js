@@ -683,7 +683,14 @@
                               }
                             }
                           } else {
-                              m  = collect(m,O.objects[c].m);
+                              /**
+                               * BUGFIX, in async communication the object may
+                               *  be  undefined at times. When it is ignire it and wait
+                               * until it is ready
+                               */
+                              if(typeof O.objects[c].m !== 'undefined') {
+                                m  = collect(m,O.objects[c].m);
+                              }
                               c++;
                               window['clear' + O.runner](O.oot);
                           } 
