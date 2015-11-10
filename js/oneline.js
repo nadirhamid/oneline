@@ -44,6 +44,7 @@
   Oneline.objects = Oneline.objects || [];
   Oneline.after = Date.now();
   Oneline.signature = "";
+  Oneline.running = 0;
   //  list of async data + keys
   Oneline.asyncs = {};
   // list of async callbacks. Preserve even when invoked
@@ -652,7 +653,10 @@
                      || O.socket.readyState === 3) {
                       return O.connector.disconnect();
                   }
-
+                  if (Oneline.running)
+                     return;
+                     
+                  Oneline.running = 1;
                   var c = 0, m_ = {}, m ={} ; 
                   /* this should be communative
                    * and not
@@ -681,6 +685,12 @@
                                   window['clear' + O.runner](O.oot);
                                  }
                          
+                              }
+                            } else {
+                              if (O.objects[c].state === 1) {
+                                m  =collect(m,O.objects[c].m) ;
+                                c ++;
+                                window['clear' + O.runner](O.oot);
                               }
                             }
                           } else {
@@ -729,7 +739,7 @@
 
                             }
                           }
-
+                          Oneline.running = 0;
                           window['clear' + O.runner](O.ooot);
                         }
                   }, 1);
