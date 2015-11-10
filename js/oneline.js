@@ -433,10 +433,10 @@
    * @class
    */
   Oneline.geolocation = Oneline.geo = function(options, ready) {
-      Oneline.geolocation.type = "geolocation";
       Oneline.geolocation.options = options;
       if (!ready) {
       var obj =   clone(Oneline.geolocation(options,1));
+      obj.type = "geolocation";
       obj.signature = Oneline.signature;
       Oneline.joinOrNew(obj);
       }
@@ -475,9 +475,9 @@
    */
   Oneline.event = function(options, ready) {
       Oneline.event.options = options;
-      Oneline.event.type = "event";
       if (!ready) {
         var obj = clone(Oneline.event(options,1));
+        obj.type = "event";
         obj.signature = Oneline.signature;
         Oneline.joinOrNew(obj);
       }
@@ -512,6 +512,7 @@
     if (!ready) {
      
       var obj = clone(Oneline.generic(options,1));
+      obj.type = "generic";
       obj.signature = Oneline.signature;
       Oneline.joinOrNew(obj);
     }
@@ -551,11 +552,11 @@
    * @class
    */
    Oneline.time = function(options, ready) {
-      Oneline.time.type = "time";
       Oneline.time.options = options;
       
       if (!ready) {
         var obj = clone(Oneline.time(options,1));
+        obj.type = "time";
         obj.signature = Oneline.signature;
         Oneline.joinOrNew(obj);
       }
@@ -579,10 +580,10 @@
     * @class
     */
    Oneline.random = function(options, ready) {
-      Oneline.random.type = "random";
       Oneline.random.options = options;
       if (!ready) { 
         var obj = clone(Oneline.random(options,1));
+        obj.type = "random";
         obj.signature = Oneline.signature;
         Oneline.joinOrNew(obj);
       }
