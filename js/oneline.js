@@ -614,8 +614,8 @@
               this.m.time = {};              
 
               if(typeof Oneline.time.options.start !== 'undefined') {
-                 this.m.time.start = Oneline.time.options.moment.start;
-                 this.m.time.end = Oneline.time.options.moment.end;
+                 this.m.time.start = Oneline.time.options.start;
+                 this.m.time.end = Oneline.time.options.end;
               } else if (typeof Oneline.time.options.moment !== 'undefined') {
                 this.m.time.start = Oneline.time.options.moment.start;
                 this.m.time.end = Oneline.time.options.moment.end;
@@ -719,7 +719,6 @@
                   /* this should be communative
                    * and not
                    */
-                  if (O.objects.length > 1) {
                     for (var i in O.objects) {
                         O.objects[parseInt(i)].run(m);
                  
@@ -727,30 +726,30 @@
                         O.oot = window['set' + O.runner](function() {
                             /* check if the prev
                              */ 
-                            if (c !== 0 && O.objects[c - 1].state !== 1)
-                                return;
+                            if(O.objects.length>0) {
+                              if (c !== 0 && O.objects[c - 1].state !== 1)
+                                  return;
 
-                            if (typeof O.objects[c] !== 'object')
-                                return;
+                              if (typeof O.objects[c] !== 'object')
+                                  return;
 
-                            if (O.objects[c].state === 1) {
+                              if (O.objects[c].state === 1) {
 
-                                m = collect(m, O.objects[c].m);
+                                  m = collect(m, O.objects[c].m);
 
-                                c ++;
+                                  c ++;
 
-                                window['clear' + O.runner](O.oot);
+                                  window['clear' + O.runner](O.oot);
+                              }
+                            } else {
+                              if(O.objects[c].state === 1) {
+                                  m =collect(m, O.objects[c].m);
+                                  c++;
+                                  window['clear' +O.runner](O.oot);
+                              }
                             }
-
                         }, 1);
-                    }
-                  } else {
-                    if (typeof O.objects[0] !== 'undefined' &&  O.objects[0].state === 1) {
-                        m = collect(m, O.objects[0].m);
-                        c++;
-                        window['clear' + O.runner](O.oot);
-                    }
-                  }
+                      }
 
                   O.ooot = window['set' + O.runner](function() {
                       if (c === O.objects.length) {
@@ -1001,4 +1000,3 @@ if (typeof object_create !== 'function') {
         return new F();
     };
 }
-
