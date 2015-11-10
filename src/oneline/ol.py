@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*- 
-
 import argparse 
 import json
 import bsonlib
@@ -33,7 +32,7 @@ from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
 from ws4py.websocket import WebSocket
 from ws4py.messaging import TextMessage
 
-DEFAULTS = dict(host='127.0.0.1', port=9000, path=os.path.abspath(os.path.join(os.path.dirname(__file__), 'static')))
+DEFAULTS = dict(debug_mode=False, host='127.0.0.1', port=9000, path=os.path.abspath(os.path.join(os.path.dirname(__file__), 'static')))
 SETTINGS = dict(table='', agent=[], nodes=[])
 SERVERS = dict(host='server.socket_host', port='server.socket_port', path='tools.staticdir.root', ssl_key='server.ssl_private_key', ssl_certificate='server.ssl_certificate')
 TABLE = ''
@@ -88,7 +87,7 @@ def str_to_class(str):
 
 @cherrypy.expose
 def proto(self):
-    cherrypy.log("Handler created: %s" % repr(cherrypy.request.ws_handler))
+    log_message("Handler created: " + repr(cherrypy.request.ws_handler))
 
 """
 get the caller information
@@ -173,15 +172,15 @@ process
 def stream(agent='', pline='', db='',objects=dict()):
     obj = inspect.currentframe().f_back.f_locals['self']
     config = caller_name()
-    cherrypy.log("received information from module: as")
-    cherrypy.log(caller_name().__str__())
+    log_message("received information from module: as")
+    log_message(caller_name().__str__())
     if db == '':
         config = caller_name()
 
         db = storage(caller=config['class']) 
-    cherrypy.log("waiting for ready state")
+    log_message("waiting for ready state")
     #ready()
-    cherrypy.log("ONELINE is ready") 
+    log_message("ONELINE is ready") 
 
     return pipeline(obj, db, config, scan_config(config['class']))
 
@@ -203,6 +202,8 @@ def stream(agent='', pline='', db='',objects=dict()):
       return json.dumps(results)
 """
 
+
+ 
 
 def nextcheck(pieces, cnt, pred):
   list = []
@@ -262,6 +263,16 @@ class MicroService(object):
   def end(self,data):
     self.http_connection.post(self.endpoint +"/" +"end",data=data)
 
+
+def log_message(the_message):
+  global DEFAULTS
+  if DEFAULTS['debug_mode']:
+    #using cherry py
+    if isinstance(the_message,str):
+      cherrypy.log(the_message)
+    else:
+      log_message(the_message.__str__())
+    
 
 class request(object):
   def __init__(self, requestCurrent=dict()):
@@ -525,11 +536,11 @@ def  signalStop(object):
   clients = cherrypy.engine.publish('get-client', object.unique).pop()
   for i in range(0, len(clients)):
     if clients[i].unique == object.unique:
-      cherrypy.log("removing client: " + clients[i].unique) 
-      cherrypy.log("removing client that has db uniquie: " +clients[i].dbunique)
+      log_message("removing client: " + clients[i].unique) 
+      log_message("removing client that has db uniquie: " +clients[i].dbunique)
       #del clients[i]
   
-      #cherrypy.log("removing client: " + clients[i].unique)
+      #log_message("removing client: " + clients[i].unique)
       #cherrypy.engine.publish('set-client', clients)
       cherrypy.engine.publish('close-database',  clients[i].dbunique)
       cherrypy.engine.publish('del-client',clients[i].dbunique)
@@ -591,7 +602,7 @@ class _server(object):
 
     ##@cherrypy.expose
     ##def ws(self):
-    ##      cherrypy.log("Handler created: %s" % repr(cherrypy.request.ws_handler))
+    ##      log_message("Handler created: %s" % repr(cherrypy.request.ws_handler))
 
 """
 plugin for ws4py. defines
@@ -718,7 +729,7 @@ class server(object):
               cherrypy.server.ssl_private_key = unicodeReplace(config['ssl_key'])
               cherrypy.server.ssl_certificate = unicodeReplace(config['ssl_certificate'])
             else:
-              cherrypy.log("If you want to use SSL and WSS please specifiy 'ssl_certificate' and 'ssl_key' in Main.conf")
+              log_message("If you want to use SSL and WSS please specifiy 'ssl_certificate' and 'ssl_key' in Main.conf")
               exit(1)
         else:
           cherrypy.config.update({SERVERS['host']: self.host,
@@ -1004,7 +1015,7 @@ class storage(object):
         _OL_TABLE = table
      
         _OL_DB = self.db
-        cherrypy.log("registering the database and table under: %s, %s" % (_OL_DB.__str__(), _OL_TABLE))
+        log_message("registering the database and table under: " + _OL_DB.__str__() + ", " + _OL_TABLE.__str__())
         self.db.commit()
 
     def query(self, queries, **kwargs):
@@ -1210,7 +1221,7 @@ class pipeline(object):
           
         storage = cherrypy.engine.publish('get-database', self.callerObject.dbunique).pop()
         uuid =m['uuid'] if 'uuid'  in m.keys() else uuid.uuid4()
-        timestamp = m['timestamp'] if 'timestamp'  in m.keys() else time.time()
+        timestamp = m['timestamp'] if 'timestamp'  in m.keys() else _time.time()
         connection_uuid   = m['connection_uuid']
         """
         check if we need to update the config
@@ -1253,23 +1264,30 @@ class pipeline(object):
 
         c = 0
         i_m = m
-
+        t = 0
         for i in self._objs:
-            try:
-              i.storage = storage
-              i.logger = self.logger
-
-              if c == 0:
-                  m = i.run(m)
-              else:
-                  m = i.run(self._append(m, p)) 
-            except Exception, e:
-              i.log()
-              ## main logging routine should be different from the modules, here we will collect the generic errors from python
-              self.logger.append( dict(message=str(e)))
-              #c += 1
-
-            c += 1
+            if not t == len(self._objs)-1:
+              try:
+                i.storage = storage
+                i.logger = self.logger
+                log_message("Entering: ")
+                log_message(m.__str__())
+                if c == 0:
+                    m = i.run(m)
+                else:
+                    m = i.run(self._append(m, p)) 
+                log_message("Leaving: ")
+                log_message(m.__str__())
+                c += 1
+                t += 1
+              except Exception, e:
+                i.log()
+                print e
+                ## main logging routine should be different from the modules, here we will collect the generic errors from python
+                t += 1
+                self.logger.append( dict(message=str(e)))
+            else:
+              break
 
         if len(self._objs)  > 0 and len(m) > 0:
         #do we have the confidence
@@ -1446,7 +1464,7 @@ class echo(object):
 """
 geolocation module:
 all lookups in this 'must'
-ensure that the table has 'lng' and 'lat'
+ensure that the table has lngfield and latfield
 properties.
 """
 class geolocation(object):
@@ -1456,6 +1474,8 @@ class geolocation(object):
         self.range = 10
         self.limit = 100 
         self.last = 0
+        self.latfield =  "lat"
+        self.lngfield =  "lng"
         self.errors = []
 
     def log(self):
@@ -1465,11 +1485,21 @@ class geolocation(object):
             self.logger.append(dict(object=name, message=i))
 
     def run(self, message):
-        lat = float(message['packet']['geo']['lat'])
-        lng = float(message['packet']['geo']['lng'])
+        if 'lat_field'  in message['packet']['geo'].keys():
+          latfield = message['packet']['geo']['lat_field']
+        else:
+          latfield =  self.latfield
+        if 'lng_field' in  message['packet']['geo'].keys():
+          lngfield = message['packet']['geo']['lng_field']
+        else:
+          lngfield = self.lngfield
+        latfield = float(message['packet']['geo'][latfield])
+        lngfield = float(message['packet']['geo'][lngfield])
+        if 'range' in message['packet']['geo'].keys():
+          self.range = float(message['packet']['geo']['range'])
         range_ = float(message['packet']['geo']['range'])
         if 'limit' in message['packet']['geo'].keys():
-          self.limit = message['packet']['geo']['limit']
+          self.limit = int(message['packet']['geo']['limit'])
 
         
         _OL_DB = self.storage.get()['db']
@@ -1480,8 +1510,8 @@ class geolocation(object):
         is always more
         and minus is always lower
         """
-        lat_plus = float(lat) + float(range_)
-        lng_plus = float(lng) + float(range_)
+        lat_plus = float(latfield) + float(range_)
+        lng_plus = float(lngfield) + float(range_)
         """
         add a minus range
           
@@ -1489,8 +1519,8 @@ class geolocation(object):
         a minus
         where -50 20 = -70
         """
-        lat_minus = float(lat) + -(range_)
-        lng_minus = float(lng) + -(range_)
+        lat_minus = float(latfield) + -(range_)
+        lng_minus = float(lngfield) + -(range_)
     
         """
         set attributes to a double type
@@ -1498,11 +1528,11 @@ class geolocation(object):
         in error
         """ 
 
-        if getattr(getattr(getattr(_OL_DB, _OL_TABLE), 'lat'), 'type') != 'double':
-            setattr(getattr(getattr(_OL_DB, _OL_TABLE), 'lat'), 'type', 'double')
+        if getattr(getattr(getattr(_OL_DB, _OL_TABLE), latfield), 'type') != 'float':
+            setattr(getattr(getattr(_OL_DB, _OL_TABLE), latfield), 'type', 'float')
 
-        if getattr(getattr(getattr(_OL_DB, _OL_TABLE), 'lng'), 'type') != 'double':
-            setattr(getattr(getattr(_OL_DB, _OL_TABLE), 'lng'), 'type', 'double')
+        if getattr(getattr(getattr(_OL_DB, _OL_TABLE), lngfield), 'type') != 'float':
+            setattr(getattr(getattr(_OL_DB, _OL_TABLE), lngfield), 'type', 'float')
         """
         remember to add its confidence
         level to the packed 
@@ -1524,11 +1554,11 @@ class geolocation(object):
         ## seek to test
         ##
 
-        if not 'lat' in getattr(_OL_DB, _OL_TABLE).fields:
+        if not latfield in getattr(_OL_DB, _OL_TABLE).fields:
             self.errors.append('This table does have a latitude column')
             raise NameError('ONELINE: This table does have a latitude column')
 
-        if not 'lng' in getattr(_OL_DB, _OL_TABLE).fields:
+        if not lngfield in getattr(_OL_DB, _OL_TABLE).fields:
             self.errors.append('This table does have a longitude column')
             raise NameError('ONELINE: This table does have a longitude column')
 
@@ -1543,31 +1573,31 @@ class geolocation(object):
             ##
             ## forward
             ##
-            q1.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") >= lat) 
-            q1.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") <= lat_plus) 
-            q1.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") >= lng)
-            q1.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") <= lng_plus)
+            q1.append(getattr(getattr(_OL_DB, _OL_TABLE), latfield) >= latfield) 
+            q1.append(getattr(getattr(_OL_DB, _OL_TABLE), latfield) <= lat_plus) 
+            q1.append(getattr(getattr(_OL_DB, _OL_TABLE), lngfield) >= lngfield)
+            q1.append(getattr(getattr(_OL_DB, _OL_TABLE), lngfield) <= lng_plus)
 
 
             ## northeast
             ##
-            q2.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") >= lat) 
-            q2.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") <= lat_plus)
-            q2.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") <= lng)
-            q2.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") >= lng_minus)
+            q2.append(getattr(getattr(_OL_DB, _OL_TABLE), latfield) >= latfield) 
+            q2.append(getattr(getattr(_OL_DB, _OL_TABLE), latfield) <= lat_plus)
+            q2.append(getattr(getattr(_OL_DB, _OL_TABLE), lngfield) <= lngfield)
+            q2.append(getattr(getattr(_OL_DB, _OL_TABLE), lngfield) >= lng_minus)
 
             ##
             ##
             ##
-            q3.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") >= lat) 
-            q3.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") <= lat_plus)
-            q3.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") <= lng)
-            q3.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") >= lng_minus)
+            q3.append(getattr(getattr(_OL_DB, _OL_TABLE), latfield) >= latfield) 
+            q3.append(getattr(getattr(_OL_DB, _OL_TABLE), latfield) <= lat_plus)
+            q3.append(getattr(getattr(_OL_DB, _OL_TABLE), lngfield) <= lngfield)
+            q3.append(getattr(getattr(_OL_DB, _OL_TABLE), lngfield) >= lng_minus)
 
-            q4.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") <= lat)
-            q4.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") >= lat_minus)
-            q4.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") >= lng)
-            q4.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") <= lng_plus) 
+            q4.append(getattr(getattr(_OL_DB, _OL_TABLE), latfield) <= latfield)
+            q4.append(getattr(getattr(_OL_DB, _OL_TABLE), latfield) >= lat_minus)
+            q4.append(getattr(getattr(_OL_DB, _OL_TABLE), lngfield) >= lngfield)
+            q4.append(getattr(getattr(_OL_DB, _OL_TABLE), lngfield) <= lng_plus) 
 
 
             ## when lat is less than
@@ -1582,38 +1612,6 @@ class geolocation(object):
             ## also needs the
             ## range spec
             queriesf = []
-            testings = [dict(
-              minlat=lat,
-              maxlat=lat_plus,
-              minlng=lng,
-              maxlng=lng_plus,
-              operand1='>=',
-              operand2='<='
-            ),
-            dict(
-              minlat=lat,
-              maxlat=lat_plus,
-              minlng=lng,
-              maxlng=lng_minus,
-              operand1='>=',
-              operand2='<='
-      
-            ),
-            dict(
-              minlat=lat,
-              maxlat=lat_minus,
-              minlng=lng,
-              maxlng=lng_plus,
-              operand1='<=',
-              operand2='>='
-            )
-            ]
-            print testings
-            for i in testings:
-               print i
-               print "minlat: {0}, maxlat: {1},  minlng: {2}, maxlng: {3}\n operands: {4}, {5}".format(i['minlat'], i['maxlat'], i['minlng'],i['maxlng'], i['operand1'], i['operand2'])
-            
-          
             q1f = reduce(lambda a,b:(a&b), q1)
             q2f = reduce(lambda a,b:(a&b), q2)
             q3f = reduce(lambda a,b:(a&b), q3)
@@ -1621,34 +1619,33 @@ class geolocation(object):
             queriesf.append(q2f)
             queriesf.append(q3f)
             finalQuery = reduce(lambda a,b:(a|b), queriesf)
-            print "limit is:"
-            print self.limit
-
-            
-            rows = _OL_DB(finalQuery).select(limitby=(0,12))
+        
+            rows = _OL_DB(finalQuery).select(limitby=(0,self.limit))
             return rows.as_list()
 
         else:
+            
             for k in range(0, len(message['data'])):
+               
               """
               needs birectional checks
               """
-              expr1 = bool((float(message['data'][k]['lat']) >= lat) and \
-                    (float(message['data'][k]['lat']) <= lat_plus) and \
-                    (float(message['data'][k]['lng']) >= lng) and \
-                    (float(message['data'][k]['lng']) <= lng_plus)) 
-              expr2 = bool((float(message['data'][k]['lat']) >= lat) and \
-                      (float(message['data'][k]['lat']) <= lat_minus) and \
-                      (float(message['data'][k]['lng']) >= lng) and \
-                      (float(message['data'][k]['lng']) <= lng_minus))
-              expr3 = bool((float(message['data'][k]['lat']) >= lat) and \
-                      (float(message['data'][k]['lng']) <= lat_plus)
-                      (float(message['data'][k]['lng']) <= lng) and \
-                      (float(message['data'][k]['lng']) >= lng_minus))
-              expr4 = bool((float(message['data'][k]['lat']) <= lat) and \
-                      (float(message['data'][k]['lat']) >= lat_minus) and \
-                      (float(message['data'][k]['lng']) >= lng) and \
-                      (float(message['data'][k]['lng']) <= lng_plus))
+              expr1 = bool((float(message['data'][k][latfield]) >= latfield) and \
+                    (float(message['data'][k][latfield]) <= lat_plus) and \
+                    (float(message['data'][k][lngfield]) >= lngfield) and \
+                    (float(message['data'][k][lngfield]) <= lng_plus)) 
+              expr2 = bool((float(message['data'][k][latfield]) >= latfield) and \
+                      (float(message['data'][k][latfield]) <= lat_minus) and \
+                      (float(message['data'][k][lngfield]) >= lngfield) and \
+                      (float(message['data'][k][lngfield]) <= lng_minus))
+              expr3 = bool((float(message['data'][k][latfield]) >= latfield) and \
+                      (float(message['data'][k][lngfield]) <= lat_plus)
+                      (float(message['data'][k][lngfield]) <= lngfield) and \
+                      (float(message['data'][k][lngfield]) >= lng_minus))
+              expr4 = bool((float(message['data'][k][latfield]) <= latfield) and \
+                      (float(message['data'][k][latfield]) >= lat_minus) and \
+                      (float(message['data'][k][lngfield]) >= lngfield) and \
+                      (float(message['data'][k][lngfield]) <= lng_plus))
               
               if expr1 or expr2 or expr3 or expr4:
                   if not 'confidence' in message['data'][k].keys():
@@ -1757,9 +1754,9 @@ class random(object):
         amount = int(message['packet']['random']['amount'])
         _OL_DB = self.storage.get()['db']
         _OL_TABLE = self.storage.get()['table']
-        cherrypy.log("Entering random module with:")
-        cherrypy.log(message.__str__())
-        cherrypy.log("Database is:%s, table is  %s"  %(_OL_DB.__str__(),_OL_TABLE))
+        log_message("Entering random module with:")
+        log_message(message.__str__())
+        log_message("Database is: " + _OL_DB  +  ", " + _OL_TABLE)
         if len(message['data']) == 0:
             queries = []
             queries.append(getattr(_OL_DB, _OL_TABLE))
@@ -1767,8 +1764,8 @@ class random(object):
             query = reduce(lambda a,b:(a&b),queries)
             rows = _OL_DB(query).select(orderby='<random>', limitby=(0, amount))    
 
-            cherrypy.log("Leaving random module with:")
-            cherrypy.log( rows.as_list().__str__())
+            log_message("Leaving random module with:")
+            log_message( rows.as_list().__str__())
             return rows.as_list()
         else:
             found = len(message['data'])
@@ -1782,8 +1779,8 @@ class random(object):
                   else:
                       message['data'][sel]['confidence'] += 1
 
-            cherrypy.log("Leaving random module with:")
-            cherrypy.log(message['data'].__str__())
+            log_message("Leaving random module with:")
+            log_message(message['data'].__str__())
             return message['data']
             
 
@@ -1800,6 +1797,14 @@ class time(object):
     def run(self, message):
         start = int(message['packet']['time']['start'])
         end = int(message['packet']['time']['end'])
+        if 'start_field'  in message['packet']['time'].keys():
+          sfield =  message['packet']['time']['start_field']
+        else:
+          sfield =  sfield
+        if 'end_field' in message['packet']['time'].keys():
+          efield = message['packet']['time']['efield'] 
+        else:
+          efield = efield
         _OL_DB = self.storage.get()['db']
         _OL_TABLE = self.storage.get()['table']
 
@@ -1808,26 +1813,26 @@ class time(object):
             raise NameError('ONELINE: start time higher than end time in time')
 
         if len(message['data']) == 0:
-            if not 'stime' in getattr(_OL_DB, _OL_TABLE).fields:
+            if not sfield in getattr(_OL_DB, _OL_TABLE).fields:
                 self.errors.append('This table does have a stime column')
                 raise NameError('ONELINE: This table does have a stime column')
 
-            if not 'etime' in getattr(_OL_DB, _OL_TABLE).fields:
+            if not efield in getattr(_OL_DB, _OL_TABLE).fields:
                 self.errors.append('This table does have a etime column')
                 raise NameError('ONELINE: This table does have a etime column')
 
-            if getattr(getattr(getattr(_OL_DB, _OL_TABLE), 'stime'), 'type') != 'integer':
-                setattr(getattr(getattr(_OL_DB, _OL_TABLE), 'stime'), 'type', 'integer')
+            if getattr(getattr(getattr(_OL_DB, _OL_TABLE), sfield), 'type') != 'integer':
+                setattr(getattr(getattr(_OL_DB, _OL_TABLE), sfield), 'type', 'integer')
 
-            if getattr(getattr(getattr(_OL_DB, _OL_TABLE), 'etime'), 'type') != 'integer':
-                setattr(getattr(getattr(_OL_DB, _OL_TABLE), 'etime'), 'type', 'integer')
+            if getattr(getattr(getattr(_OL_DB, _OL_TABLE), efield), 'type') != 'integer':
+                setattr(getattr(getattr(_OL_DB, _OL_TABLE), efield), 'type', 'integer')
 
             queries = []
 
-            queries.append(getattr(getattr(_OL_DB, _OL_TABLE), 'stime') >= start)
-            queries.append(getattr(getattr(_OL_DB, _OL_TABLE), 'etime') <= end)
-            queries.append(getattr(getattr(_OL_DB, _OL_TABLE), 'stime') <= \
-                           getattr(getattr(_OL_DB, _OL_TABLE), 'etime'))
+            queries.append(getattr(getattr(_OL_DB, _OL_TABLE), sfield) >= start)
+            queries.append(getattr(getattr(_OL_DB, _OL_TABLE), efield) <= end)
+            queries.append(getattr(getattr(_OL_DB, _OL_TABLE), sfield) <= \
+                           getattr(getattr(_OL_DB, _OL_TABLE), efield))
 
             query = reduce(lambda a,b:(a&b),queries)
             rows = _OL_DB(query).select()
@@ -1836,9 +1841,9 @@ class time(object):
             
         else:
             for k in range(0, len(message['data'])):
-                if int(message['data'][k]['stime']) >= start and \
-                   int(message['data'][k]['etime']) <= end and \
-                   int(message['data'][k]['stime']) <= int(message['data'][k]['etime']):
+                if int(message['data'][k][sfield]) >= start and \
+                   int(message['data'][k][efield]) <= end and \
+                   int(message['data'][k][sfield]) <= int(message['data'][k][efield]):
                     if not 'confidence' in message['data'][k].keys():
                         message['data'][k]['confidence'] = 1
                     else:
@@ -1883,8 +1888,8 @@ class event(object):
         limit = 12 
         page = 0
 
-        cherrypy.log("entering: event module with:")
-        cherrypy.log(message.__str__())
+        log_message("entering: event module with:")
+        log_message(message.__str__())
         reserved = ['limit', 'page', 'type']
 
         for k,v in message['packet']['event'].iteritems():
@@ -1911,7 +1916,7 @@ class event(object):
             else:
                 opts.append(dict(key=k, value=v['value'], op=v['op']))
 
-        if len(message['data']) == 0:
+        if not len(message['data']>0):
 
             for i in opts:
 
@@ -1948,14 +1953,12 @@ class event(object):
             else:
               rows = _OL_DB(query).select(limitby=(0, limit))
 
-            cherrypy.log("leaving event module with: ")
-            cherrypy.log(rows.as_list().__str__())
             return rows.as_list()
 
         else:
 
             if  len(message['data']) > 0:
-              for k in range(0, len(message['data'])):
+              for k in range(0, len(message['data']) -1):
 
                   """
                   whenever a match is met
@@ -1978,8 +1981,6 @@ class event(object):
                           if OPS[op](message['data'][k][i['key']], i['value']):
                               message['data'][k]['confidence'] += step
 
-            cherrypy.log(" Leaving event module with: ")
-            cherrypy.log(message['data'].__str__())
             return message['data']  
 
 globals()['geo'] = globals()['geolocation']

@@ -45,6 +45,7 @@
   Oneline.after = Date.now();
   Oneline.signature = "";
   Oneline.running = 0;
+  Oneline.update = 0;
   //  list of async data + keys
   Oneline.asyncs = {};
   // list of async callbacks. Preserve even when invoked
@@ -134,12 +135,33 @@
   Oneline.newSignature = function() {
     Oneline.signature = Oneline.uuid();
   };
+  Oneline.allReady = function() {
+    var countOfObjects = Oneline.objects.length;
+    var countReady = 0;
+    for (  var  i  in Oneline.objects ) {
+        if (Oneline.objects[i].state === 1 ) {
+          countReady ++;
+        }
+     }
+     return countReady === countOfObjects - 1  ? true : false;      
+  };
+
+  Oneline.collectAll = function() {
+    var packet = {};
+    for (var i in Oneline.objects) {
+       packet[Oneline.objects[i].type] = Oneline.objects[i].m;
+    }
+    return packet;
+   };
   Oneline.joinOrNew =  function(obj) {
      var needsMerge = 0;
+     Oneline.signature = Oneline.uuid();
      for (var i in Oneline.objects) {
         if (Oneline.objects[i].type === obj.type) {
+            delete Oneline.objects[i]; 
             Oneline.objects[i] = obj;
             Oneline.objects[i].state = 0; 
+            Oneline.update = 1;
             needsMerge = 1;
          }
       }
@@ -147,7 +169,7 @@
           Oneline.objects.push(obj);
       }
     };
-           
+               
   // one time
   Oneline.once =   function(event_type, message) {
            var m_ = {}; 
@@ -160,9 +182,10 @@
               packet[event_type.obj]['data'] = event_type.data.data;
             } else {
             message['type'] =  event_type;
+            message['data'] = {};
             // TODO no backwards captability should be present, in next version
             for(var i in Object.keys(message)) {
-            message['data'][message[i]] = message;
+            message['data'][message[i]] = message[i];
             delete message[i];
             }
            }
@@ -177,8 +200,6 @@
                           m_.connection_uuid = O.connection_uuid;
         // wait for callback
         // and the connection
-
-        Oneline.newSignature();
         Oneline.socket.send(Oneline.interop.stringify(m_));
   };
 
@@ -230,6 +251,7 @@
       Oneline.host = options.host || Oneline.host; Oneline.type = options.type === 'bind' ? 'bind' : 'auto';
       Oneline.on = options.on || 'click';
       Oneline.target = options.target;
+      Oneline.signalStop = false;
       Oneline.connection_uuid = Oneline.connection_uuid || Oneline.uuid();
       if (typeof signature === 'undefined') {
       Oneline.signature = Oneline.uuid();
@@ -310,6 +332,15 @@
    */
   Oneline.contextOptions = {
      "geolocation": {
+        "lat_field": {
+            "default": "lat"
+        },
+        "lng_field": {
+            "default": "lng"
+        },
+        "every":  {
+          "default": 10.00
+        },
         "limit": {
           "default": 512
         },
@@ -319,7 +350,15 @@
         "bidirectional": {
           "default": false
         }
-     }
+     },
+     "time": {
+        "sfield": {
+          "default": "stime"
+        },
+        "efield": {
+          "default": "etime"
+        }
+      }
   };
   /**
    * fetch an optional
@@ -333,14 +372,13 @@
    * 
    * @method
    */
-  Oneline.fetchOptional = function(mod, option) {
-     if (typeof option === 'undefined') {
+  Oneline.fetchOptional = function(mod, option, value) {
+     if (typeof value === 'undefined') {
         return Oneline.contextOptions[mod][option]['default'];
      }
 
-     return option;
+     return value;
   };
-
   /**
    is the sender the person who requested this
    stream ?
@@ -439,6 +477,7 @@
       var obj =   clone(Oneline.geolocation(options,1));
       obj.type = "geolocation";
       obj.signature = Oneline.signature;
+      obj.options = Oneline.geolocation.options;
       Oneline.joinOrNew(obj);
       }
 
@@ -452,21 +491,23 @@
            */
           run: function(m) 
           {
+              if ( this.state != 1) {
               this.m = m || {};
               this.m.geo = {};
-              this.state = 0;
-              this.m.geo.every = O.geolocation.options.every;
-              this.m.geo.range = O.geolocation.options.range;
-              this.m.geo.limit = O.fetchOptional(O.geolocation.options.limit);
+              this.m.geo.every = O.fetchOptional("geolocation", "every", O.geolocation.options.every);
+              this.m.geo.range = O.fetchOptional("geolocation", "range", O.geolocation.options.range);
+              this.m.geo.limit = O.fetchOptional("geolocation", "limit", O.geolocation.options.limit);
+              this.m.geo.lat_field = O.fetchOptional("geolocation","lat_field", O.geolocation.options.lat_field);
+              this.m.geo.lng_field = O.fetchOptional("geolocation", "lng_field", O.geolocation.options.lng_field);
               var that = this;
-
               navigator.geolocation.getCurrentPosition(function(res) {
-                  that.m.geo.lat = res.coords.longitude;
-                  that.m.geo.lng = res.coords.latitude;
-                  that.m.geo.range = O.geolocation.options.range;
-                  that.m.geo.limit = O.geolocation.options.limit;
-                  that.state = 1;
-              });
+                  if(res.coords && typeof res.coords !==  'undefined') {
+                      that.m.geo.lat =  res.coords.latitude;
+                      that.m.geo.lng =  res.coords.longitude;
+                      that.state = 1;
+                    }
+                  });
+              }
           }
       };
   };
@@ -480,6 +521,7 @@
         var obj = clone(Oneline.event(options,1));
         obj.type = "event";
         obj.signature = Oneline.signature;
+        obj.options =  Oneline.event.options;
         Oneline.joinOrNew(obj);
       }
       return {
@@ -515,6 +557,7 @@
       var obj = clone(Oneline.generic(options,1));
       obj.type = "generic";
       obj.signature = Oneline.signature;
+      obj.options = Oneline.generic.options;
       Oneline.joinOrNew(obj);
     }
 
@@ -559,6 +602,7 @@
         var obj = clone(Oneline.time(options,1));
         obj.type = "time";
         obj.signature = Oneline.signature;
+        obj.options = Oneline.time.options;
         Oneline.joinOrNew(obj);
       }
 
@@ -569,9 +613,15 @@
               this.m = m || {};
               this.m.time = {};              
 
-              this.m.time.start = Oneline.time.options.moment.start;
-              this.m.time.end = Oneline.time.options.moment.end;
-
+              if(typeof Oneline.time.options.start !== 'undefined') {
+                 this.m.time.start = Oneline.time.options.moment.start;
+                 this.m.time.end = Oneline.time.options.moment.end;
+              } else if (typeof Oneline.time.options.moment !== 'undefined') {
+                this.m.time.start = Oneline.time.options.moment.start;
+                this.m.time.end = Oneline.time.options.moment.end;
+              }
+              this.m.time.sfield = Oneline.fetchOptional("time", "sfield", Oneline.time.options.sfield);
+              this.m.time.efield = Oneline.fetchOptional("time", "efield", Oneline.time.options.efield);
               this.state = 1;
           }
       };
@@ -586,6 +636,7 @@
         var obj = clone(Oneline.random(options,1));
         obj.type = "random";
         obj.signature = Oneline.signature;
+        obj.options = Oneline.random.options;
         Oneline.joinOrNew(obj);
       }
 
@@ -621,10 +672,7 @@
       O.linetype = Oneline.type;
       O.provider = O.linetype === 'bind' ? 'Timeout' : 'Interval';
       O.runner = 'Interval';
-      if (Oneline.type === 'bind')
-          if (typeof Oneline.target !== 'undefined' && Oneline.target.tagName)
-                Oneline.target['on' + Oneline.on] = 
-                   function() { return Oneline.pipeline(agent, O.objects, O.callback).run(); }
+
       return {
 
           /* stop the oneline streaming
@@ -645,103 +693,83 @@
           run: function() 
           {
               Oneline.signalStop  = false;
+              Oneline.update = 0;
               Oneline.connector.connect();
+              this.runtimeSignature = Oneline.signature; 
+              var runtimeObject = this; 
               O.t = window['set' + O.provider](function() {
-                  // try only when the connection state is 0
+                  if (Oneline.update) {
+                     Oneline.running=0;
+                     O.connector.clear();
+                     O.newSignature(); 
+                     return O.pipeline(O.agent,O.objects,O.callback).run();
+                  }
+                  if (Oneline.running || runtimeObject.runtimeSignature !== O.signature) {
+                     return;
+                  }
                   if (Oneline.signalStop
                      || O.socket.readyState === 2
                      || O.socket.readyState === 3) {
                       return O.connector.disconnect();
                   }
-                  if (Oneline.running)
-                     return;
-                     
-                  Oneline.running = 1;
-                  var c = 0, m_ = {}, m ={} ; 
+                  O.running = 1;
+                   
+                  var m = {}, c = 0, m_ = {}, ii = 0, t, i = 0;
+
                   /* this should be communative
                    * and not
                    */
-                  for (var i in O.objects) {
-                      if (O.objects[parseInt(i)].signature === O.signature) {
-                      O.objects[parseInt(i)].run(m);
-                      O.oot = window['set' + O.runner](function() {
-
-                          /* check if the prev
-                           */ 
-                          if (O.objects.length > 1) {
-                            if (typeof O.objects[c - 1]  !== 'undefined') {
-                              if (c !== 0 && O.objects[c - 1].state !== 1) {
-                                  return;
-      
-                              if (typeof O.objects[c] !== 'object')
-                                  return;
-
-                              if (O.objects[c].state === 1) {
-
-                                  m = collect(m, O.objects[c].m);
-
-                                  c ++;
-
-                                  window['clear' + O.runner](O.oot);
-                                 }
+                  if (O.objects.length > 1) {
+                    for (var i in O.objects) {
+                        O.objects[parseInt(i)].run(m);
+                 
                          
-                              }
-                            } else {
-                              if (O.objects[c].state === 1) {
-                                m  =collect(m,O.objects[c].m) ;
-                                c ++;
-                                window['clear' + O.runner](O.oot);
-                              }
-                            }
-                          } else {
-                              /**
-                               * BUGFIX, in async communication the object may
-                               *  be  undefined at times. When it is ignire it and wait
-                               * until it is ready
-                               */
-                              if(typeof O.objects[c] !== 'undefined' && O.objects[c].state === 1) {
-                                m  = collect(m,O.objects[c].m);
-                                window['clear' + O.runner](O.oot);
-                                c++; 
-                              } else {
-                                 window['clear' + O.runner](O.oot);
-                                c++;
-                              }
-                          } 
+                        O.oot = window['set' + O.runner](function() {
+                            /* check if the prev
+                             */ 
+                            if (c !== 0 && O.objects[c - 1].state !== 1)
+                                return;
 
-                      }, 1);
+                            if (typeof O.objects[c] !== 'object')
+                                return;
+
+                            if (O.objects[c].state === 1) {
+
+                                m = collect(m, O.objects[c].m);
+
+                                c ++;
+
+                                window['clear' + O.runner](O.oot);
+                            }
+
+                        }, 1);
+                    }
+                  } else {
+                    if (typeof O.objects[0] !== 'undefined' &&  O.objects[0].state === 1) {
+                        m = collect(m, O.objects[0].m);
+                        c++;
+                        window['clear' + O.runner](O.oot);
                     }
                   }
 
                   O.ooot = window['set' + O.runner](function() {
                       if (c === O.objects.length) {
+
                           m_.packet = m;
-   
-                          if (Object.keys(m_.packet).length > 0) {
-                            /* if we have an agent,
-                             * add it to the message
-                             */
 
-                      
-                            t = Date.now();
-                            m_.packet.order = O.order;
-                            m_.packet.interop = O.interop;
-                            m_.asyncs = O._getActiveAsyncs();
-                            m_.uuid = O.uuid();
-                            m_.timestamp = t;
-                            m_.connection_uuid = O.connection_uuid;
-
-                            if (t  > Oneline.after) {
-                            O.socket.send(O.interop.stringify(m_));
-
-                            //if (typeof O.callback === 'function')
-                            //    O.callback(m_);
-
-                            }
+                          /* if we have an agent,
+                           * add it to the message
+                           */
+                          t = new Date().getTime();
+                          m_.timestamp = t; 
+                          m_.uuid = O.uuid();
+                          m_.connection_uuid = O.connection_uuid;
+                          if(t >  Oneline.after) {
+                          O.socket.send(O.interop.stringify(m_));
                           }
-                          Oneline.running = 0;
-                          window['clear' + O.runner](O.ooot);
-                        }
+                          O.running = 0;
+                         window['clear' + O.runner](O.ooot);
+                      }
                   }, 1);
 
               }, O.freq);
@@ -760,6 +788,8 @@
       if (!ready) {
           var obj = clone(Oneline.sound(options,1));
           obj.signature = Oneline.signature;
+          obj.type = "sound";
+          obj.options = Oneline.sound.options;
           Oneline.joinOrNew(obj);
       }
        
@@ -814,7 +844,13 @@
           if (O.socket.readyState === 2 || O.socket.readyState === 3)
             return;
 
+          O.connector.clear();
           return O.socket.close();
+      },
+      clear: function() {
+          window['clear' + O.provider](O.t);
+          window['clear' + O.runner](O.oot);
+          window['clear' + O.runner](O.ooot);
       }
   };
 
