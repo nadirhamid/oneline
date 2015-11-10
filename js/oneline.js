@@ -688,11 +688,14 @@
                                *  be  undefined at times. When it is ignire it and wait
                                * until it is ready
                                */
-                              if(typeof O.objects[c] !== 'undefined') {
+                              if(typeof O.objects[c] !== 'undefined' && O.objects[c].state === 1:) {
                                 m  = collect(m,O.objects[c].m);
+                                window['clear' + O.runner](O.oot);
+                                c++; 
+                              } else {
+                                 window['clear' + O.runner](O.oot);
+                                c++;
                               }
-                              c++;
-                              window['clear' + O.runner](O.oot);
                           } 
 
                       }, 1);
