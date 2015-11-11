@@ -32,7 +32,7 @@ from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
 from ws4py.websocket import WebSocket
 from ws4py.messaging import TextMessage
 
-DEFAULTS = dict(debug_mode=False, host='127.0.0.1', port=9000, path=os.path.abspath(os.path.join(os.path.dirname(__file__), 'static')))
+DEFAULTS = dict(debug_mode=True, host='127.0.0.1', port=9000, path=os.path.abspath(os.path.join(os.path.dirname(__file__), 'static')))
 SETTINGS = dict(table='', agent=[], nodes=[])
 SERVERS = dict(host='server.socket_host', port='server.socket_port', path='tools.staticdir.root', ssl_key='server.ssl_private_key', ssl_certificate='server.ssl_certificate')
 TABLE = ''
@@ -88,6 +88,41 @@ def str_to_class(str):
 @cherrypy.expose
 def proto(self):
     log_message("Handler created: " + repr(cherrypy.request.ws_handler))
+
+
+##  parse the type from a mysql or postgresql
+##  type column, VARCHAR(255) -> VARCHAR
+##  BIGINT  -> BIGINT
+##
+def sub_field(field_type):
+  import re
+  matches = re.findall("(.*)\(",field_type)
+  if matches:
+    return matches[0]
+  return field_type
+
+def make_field(field_name,field_type):
+  sub_match = sub_field(field_type).lower()
+  if sub_match == "float":
+    return Field(field_name, "double")
+  elif sub_match in ['int','bigint','smallint','integer']:
+    return Field(field_name, "integer")
+  elif sub_match in ['date','datetime']:
+    return Field(field_name, "date")
+  elif sub_match in ['time']:
+    return Field(field_name, "time")
+  elif sub_match in ['double', 'decimal']:
+    return Field(field_name, "double")
+  elif sub_match in ['char', 'varchar', 'string']:
+    return Field(field_name, "string")
+  elif sub_match in ['mediumblob', 'blob']:
+    return Field(field_name, "blob")
+  return Field(field_name,"string")
+
+
+
+
+
 
 """
 get the caller information
@@ -996,7 +1031,8 @@ class storage(object):
                       kw['primarykey'] = [j[0]]
                       has_auto_increment = 1
                     else:
-                      args.append(Field(j[0]))
+                      newField = make_field(j[0],j[1])
+                      args.append(newField)
 
               
 
@@ -1266,7 +1302,7 @@ class pipeline(object):
         i_m = m
         t = 0
         for i in self._objs:
-            if not t == len(self._objs)-1:
+            if not t == len(self._objs):
               try:
                 i.storage = storage
                 i.logger = self.logger
@@ -1464,7 +1500,7 @@ class echo(object):
 """
 geolocation module:
 all lookups in this 'must'
-ensure that the table has lngfield and latfield
+ensure that the table has 'lng' and 'lat'
 properties.
 """
 class geolocation(object):
@@ -1474,8 +1510,6 @@ class geolocation(object):
         self.range = 10
         self.limit = 100 
         self.last = 0
-        self.latfield =  "lat"
-        self.lngfield =  "lng"
         self.errors = []
 
     def log(self):
@@ -1485,21 +1519,11 @@ class geolocation(object):
             self.logger.append(dict(object=name, message=i))
 
     def run(self, message):
-        if 'lat_field'  in message['packet']['geo'].keys():
-          latfield = message['packet']['geo']['lat_field']
-        else:
-          latfield =  self.latfield
-        if 'lng_field' in  message['packet']['geo'].keys():
-          lngfield = message['packet']['geo']['lng_field']
-        else:
-          lngfield = self.lngfield
-        latfield = float(message['packet']['geo'][latfield])
-        lngfield = float(message['packet']['geo'][lngfield])
-        if 'range' in message['packet']['geo'].keys():
-          self.range = float(message['packet']['geo']['range'])
+        lat = float(message['packet']['geo']['lat'])
+        lng = float(message['packet']['geo']['lng'])
         range_ = float(message['packet']['geo']['range'])
         if 'limit' in message['packet']['geo'].keys():
-          self.limit = int(message['packet']['geo']['limit'])
+          self.limit = message['packet']['geo']['limit']
 
         
         _OL_DB = self.storage.get()['db']
@@ -1510,8 +1534,8 @@ class geolocation(object):
         is always more
         and minus is always lower
         """
-        lat_plus = float(latfield) + float(range_)
-        lng_plus = float(lngfield) + float(range_)
+        lat_plus = float(lat) + float(range_)
+        lng_plus = float(lng) + float(range_)
         """
         add a minus range
           
@@ -1519,8 +1543,8 @@ class geolocation(object):
         a minus
         where -50 20 = -70
         """
-        lat_minus = float(latfield) + -(range_)
-        lng_minus = float(lngfield) + -(range_)
+        lat_minus = float(lat) - (range_)
+        lng_minus = float(lng) - (range_)
     
         """
         set attributes to a double type
@@ -1528,11 +1552,11 @@ class geolocation(object):
         in error
         """ 
 
-        if getattr(getattr(getattr(_OL_DB, _OL_TABLE), latfield), 'type') != 'float':
-            setattr(getattr(getattr(_OL_DB, _OL_TABLE), latfield), 'type', 'float')
+        if getattr(getattr(getattr(_OL_DB, _OL_TABLE), 'lat'), 'type') != 'double':
+            setattr(getattr(getattr(_OL_DB, _OL_TABLE), 'lat'), 'type', 'double')
 
-        if getattr(getattr(getattr(_OL_DB, _OL_TABLE), lngfield), 'type') != 'float':
-            setattr(getattr(getattr(_OL_DB, _OL_TABLE), lngfield), 'type', 'float')
+        if getattr(getattr(getattr(_OL_DB, _OL_TABLE), 'lng'), 'type') != 'double':
+            setattr(getattr(getattr(_OL_DB, _OL_TABLE), 'lng'), 'type', 'double')
         """
         remember to add its confidence
         level to the packed 
@@ -1554,11 +1578,11 @@ class geolocation(object):
         ## seek to test
         ##
 
-        if not latfield in getattr(_OL_DB, _OL_TABLE).fields:
+        if not 'lat' in getattr(_OL_DB, _OL_TABLE).fields:
             self.errors.append('This table does have a latitude column')
             raise NameError('ONELINE: This table does have a latitude column')
 
-        if not lngfield in getattr(_OL_DB, _OL_TABLE).fields:
+        if not 'lng' in getattr(_OL_DB, _OL_TABLE).fields:
             self.errors.append('This table does have a longitude column')
             raise NameError('ONELINE: This table does have a longitude column')
 
@@ -1573,31 +1597,34 @@ class geolocation(object):
             ##
             ## forward
             ##
-            q1.append(getattr(getattr(_OL_DB, _OL_TABLE), latfield) >= latfield) 
-            q1.append(getattr(getattr(_OL_DB, _OL_TABLE), latfield) <= lat_plus) 
-            q1.append(getattr(getattr(_OL_DB, _OL_TABLE), lngfield) >= lngfield)
-            q1.append(getattr(getattr(_OL_DB, _OL_TABLE), lngfield) <= lng_plus)
+            q1.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") >= lat) 
+            q1.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") <= lat_plus) 
+            q1.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") >= lng)
+            q1.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") <= lng_plus)
 
 
             ## northeast
             ##
-            q2.append(getattr(getattr(_OL_DB, _OL_TABLE), latfield) >= latfield) 
-            q2.append(getattr(getattr(_OL_DB, _OL_TABLE), latfield) <= lat_plus)
-            q2.append(getattr(getattr(_OL_DB, _OL_TABLE), lngfield) <= lngfield)
-            q2.append(getattr(getattr(_OL_DB, _OL_TABLE), lngfield) >= lng_minus)
+            q2.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") <= lat) 
+            q2.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") >= lat_minus)
+            q2.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") <= lng)
+            q2.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") >= lng_minus)
 
             ##
             ##
             ##
-            q3.append(getattr(getattr(_OL_DB, _OL_TABLE), latfield) >= latfield) 
-            q3.append(getattr(getattr(_OL_DB, _OL_TABLE), latfield) <= lat_plus)
-            q3.append(getattr(getattr(_OL_DB, _OL_TABLE), lngfield) <= lngfield)
-            q3.append(getattr(getattr(_OL_DB, _OL_TABLE), lngfield) >= lng_minus)
+            q3.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") >= lat) 
+            q3.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") <= lat_plus)
+            q3.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") <= lng)
+            q3.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") >= lng_minus)
 
-            q4.append(getattr(getattr(_OL_DB, _OL_TABLE), latfield) <= latfield)
-            q4.append(getattr(getattr(_OL_DB, _OL_TABLE), latfield) >= lat_minus)
-            q4.append(getattr(getattr(_OL_DB, _OL_TABLE), lngfield) >= lngfield)
-            q4.append(getattr(getattr(_OL_DB, _OL_TABLE), lngfield) <= lng_plus) 
+            q4.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") <= lat)
+            q4.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") >= lat_minus)
+            q4.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") >= lng)
+            q4.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") <= lng_plus) 
+          
+              
+
 
 
             ## when lat is less than
@@ -1612,40 +1639,75 @@ class geolocation(object):
             ## also needs the
             ## range spec
             queriesf = []
+            testings = [dict(
+              minlat=lat,
+              maxlat=lat_plus,
+              minlng=lng,
+              maxlng=lng_plus,
+              operand1='>=',
+              operand2='<='
+            ),
+            dict(
+              minlat=lat,
+              maxlat=lat_plus,
+              minlng=lng,
+              maxlng=lng_minus,
+              operand1='>=',
+              operand2='<='
+      
+            ),
+            dict(
+              minlat=lat,
+              maxlat=lat_minus,
+              minlng=lng,
+              maxlng=lng_plus,
+              operand1='<=',
+              operand2='>='
+            )
+            ]
+            print testings
+            for i in testings:
+               print i
+               print "minlat: {0}, maxlat: {1},  minlng: {2}, maxlng: {3}\n operands: {4}, {5}".format(i['minlat'], i['maxlat'], i['minlng'],i['maxlng'], i['operand1'], i['operand2'])
+            
+          
             q1f = reduce(lambda a,b:(a&b), q1)
             q2f = reduce(lambda a,b:(a&b), q2)
             q3f = reduce(lambda a,b:(a&b), q3)
+            q4f = reduce(lambda a,b:(a&b), q4)
             queriesf.append(q1f)
             queriesf.append(q2f)
             queriesf.append(q3f)
+            queriesf.append(q4f)
             finalQuery = reduce(lambda a,b:(a|b), queriesf)
-        
-            rows = _OL_DB(finalQuery).select(limitby=(0,self.limit))
+            print "limit is:"
+            print self.limit
+
+            
+            rows = _OL_DB(finalQuery).select(limitby=(0,12))
             return rows.as_list()
 
         else:
-            
             for k in range(0, len(message['data'])):
-               
               """
               needs birectional checks
               """
-              expr1 = bool((float(message['data'][k][latfield]) >= latfield) and \
-                    (float(message['data'][k][latfield]) <= lat_plus) and \
-                    (float(message['data'][k][lngfield]) >= lngfield) and \
-                    (float(message['data'][k][lngfield]) <= lng_plus)) 
-              expr2 = bool((float(message['data'][k][latfield]) >= latfield) and \
-                      (float(message['data'][k][latfield]) <= lat_minus) and \
-                      (float(message['data'][k][lngfield]) >= lngfield) and \
-                      (float(message['data'][k][lngfield]) <= lng_minus))
-              expr3 = bool((float(message['data'][k][latfield]) >= latfield) and \
-                      (float(message['data'][k][lngfield]) <= lat_plus)
-                      (float(message['data'][k][lngfield]) <= lngfield) and \
-                      (float(message['data'][k][lngfield]) >= lng_minus))
-              expr4 = bool((float(message['data'][k][latfield]) <= latfield) and \
-                      (float(message['data'][k][latfield]) >= lat_minus) and \
-                      (float(message['data'][k][lngfield]) >= lngfield) and \
-                      (float(message['data'][k][lngfield]) <= lng_plus))
+              expr1 = bool((float(message['data'][k]['lat']) >= lat) and \
+                    (float(message['data'][k]['lat']) <= lat_plus) and \
+                    (float(message['data'][k]['lng']) >= lng) and \
+                    (float(message['data'][k]['lng']) <= lng_plus)) 
+              expr2 = bool((float(message['data'][k]['lat']) <= lat) and \
+                      (float(message['data'][k]['lat']) >= lat_minus) and \
+                      (float(message['data'][k]['lng']) <= lng) and \
+                      (float(message['data'][k]['lng']) >= lng_minus))
+              expr3 = bool((float(message['data'][k]['lat']) >= lat) and \
+                      (float(message['data'][k]['lng']) <= lat_plus)
+                      (float(message['data'][k]['lng']) <= lng) and \
+                      (float(message['data'][k]['lng']) >= lng_minus))
+              expr4 = bool((float(message['data'][k]['lat']) <= lat) and \
+                      (float(message['data'][k]['lat']) >= lat_minus) and \
+                      (float(message['data'][k]['lng']) >= lng) and \
+                      (float(message['data'][k]['lng']) <= lng_plus))
               
               if expr1 or expr2 or expr3 or expr4:
                   if not 'confidence' in message['data'][k].keys():
@@ -1656,6 +1718,7 @@ class geolocation(object):
                       message['data'][k]['confidence'] = 0
 
             return message['data']                  
+
 
 
 
