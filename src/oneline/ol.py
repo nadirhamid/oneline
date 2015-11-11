@@ -219,13 +219,159 @@ def stream(agent='', pline='', db='',objects=dict()):
 
     return pipeline(obj, db, config, scan_config(config['class']))
 
-
 """
-      ol.query(db.table.id==1)
-      query = ol.execute(single=True, last=True)
-     
+geolocation module:
+all lookups in this 'must'
+ensure that the table has 'lng' and 'lat'
+properties.
+"""
+class geolocation(object):
+
+    def __init__(self, every=5000):
+        self.every = every
+        self.range = 10
+        self.limit = 100 
+        self.last = 0
+        self.errors = []
+
+    def log(self):
+        name = self.__str__()
+
+        for i in self.errors:
+            self.logger.append(dict(object=name, message=i))
+
+    def run(self, message):
+        lat = float(message['packet']['geo']['lat'])
+        lng = float(message['packet']['geo']['lng'])
+        range_ = float(message['packet']['geo']['range'])
+        if 'limit' in message['packet']['geo'].keys():
+          self.limit = message['packet']['geo']['limit']
+
+        
+        _OL_DB = self.storage.get()['db']
+        _OL_TABLE = self.storage.get()['table']
+
+        """
+        need to ensure the plus
+        is always more
+        and minus is always lower
+        """
+        lat_plus = float(lat) + float(range_)
+        lng_plus = float(lng) + float(range_)
+        """
+        add a minus range
+          
+        make sure it matches
+        a minus
+        where -50 20 = -70
+        """
+        lat_minus = float(lat) + -(range_)
+        lng_minus = float(lng) + -(range_)
+    
+        """
+        set attributes to a double type
+        if there not computations may result
+        in error
+        """ 
+
+        if getattr(getattr(getattr(_OL_DB, _OL_TABLE), 'lat'), 'type') != 'double':
+            setattr(getattr(getattr(_OL_DB, _OL_TABLE), 'lat'), 'type', 'double')
+
+        if getattr(getattr(getattr(_OL_DB, _OL_TABLE), 'lng'), 'type') != 'double':
+            setattr(getattr(getattr(_OL_DB, _OL_TABLE), 'lng'), 'type', 'double')
+        """
+        remember to add its confidence
+        level to the packed 
+        message, which is 1 to start
+        """
+        ## add limit based
+        ## checkling usually
+        ## we can get around
+        ## with a decwnt
+        ## size in using the geo 
+        ## set however
+        ## we need the best
+        ## matches and subsequent
+        ##
+        ## objnects nmay need to use its results
+        ## so a limit >= 1000 <= 5000 is good
+        ## TODO:
+        ## 
+        ## seek to test
+        ##
+
+        if not 'lat' in getattr(_OL_DB, _OL_TABLE).fields:
+            self.errors.append('This table does have a latitude column')
+            raise NameError('ONELINE: This table does have a latitude column')
+
+        if not 'lng' in getattr(_OL_DB, _OL_TABLE).fields:
+            self.errors.append('This table does have a longitude column')
+            raise NameError('ONELINE: This table does have a longitude column')
+
+        if len(message['data']) == 0:
+            q1 = []
+            q2 = []
+            q3 = []
+            q4 = []
+         
+
+            ##  
+            ##
+            ## forward
+            ##
+            q1.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") >= lat) 
+            q1.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") <= lat_plus) 
+            q1.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") >= lng)
+            q1.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") <= lng_plus)
+
+
+            ## northeast
+            ##
+            q2.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") <= lat) 
+            q2.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") >= lat_minus)
+            q2.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") <= lng)
+            q2.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") >= lng_minus)
+
+            ##
+            ##
+            ##
+            q3.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") >= lat) 
+            q3.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") <= lat_plus)
+            q3.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") <= lng)
+            q3.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") >= lng_minus)
+
+            q4.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") <= lat)
+            q4.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") >= lat_minus)
+            q4.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") >= lng)
+            q4.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") <= lng_plus) 
+
+
+            ## when lat is less than
+            ## 0 we need to minus otherwise plus
+            ## 
+            ## lat <= -113 and lat >= -120
+            ## or
+            ##
+              
+             
+
+            ## also needs the
+            ## range spec
+            queriesf = []
+          
+            q1f = reduce(lambda a,b:(a&b), q1)
+            q2f = reduce(lambda a,b:(a&b), q2)
+            q3f = reduce(lambda a,b:(a&b), q3)
+            q4f = reduce(lambda a,b:(a&b), q4)
+            queriesf.append(q1f)
+            queriesf.append(q2f)
+            queriesf.append(q3f)
+            queriesf.append(q4f)
+            finalQuery = reduce(lambda a,b:(a|b), queriesf)
+            
             rows = _OL_DB(finalQuery).select(limitby=(0,12))
             return rows.as_list()
+
 
         else:
             for k in range(0, len(message['data'])):
