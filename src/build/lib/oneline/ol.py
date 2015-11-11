@@ -32,7 +32,7 @@ from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
 from ws4py.websocket import WebSocket
 from ws4py.messaging import TextMessage
 
-DEFAULTS = dict(debug_mode=True, host='127.0.0.1', port=9000, path=os.path.abspath(os.path.join(os.path.dirname(__file__), 'static')))
+DEFAULTS = dict(debug_mode=False, host='127.0.0.1', port=9000, path=os.path.abspath(os.path.join(os.path.dirname(__file__), 'static')))
 SETTINGS = dict(table='', agent=[], nodes=[])
 SERVERS = dict(host='server.socket_host', port='server.socket_port', path='tools.staticdir.root', ssl_key='server.ssl_private_key', ssl_certificate='server.ssl_certificate')
 TABLE = ''
@@ -89,7 +89,6 @@ def str_to_class(str):
 def proto(self):
     log_message("Handler created: " + repr(cherrypy.request.ws_handler))
 
-
 ##  parse the type from a mysql or postgresql
 ##  type column, VARCHAR(255) -> VARCHAR
 ##  BIGINT  -> BIGINT
@@ -120,10 +119,6 @@ def make_field(field_name,field_type):
   return Field(field_name,"string")
 
 
-
-
-
-
 """
 get the caller information
 from within another method
@@ -131,10 +126,8 @@ from within another method
 """
 def caller_name(skip=2):
     """Get a name of a caller in the format module.class.method
-
        `skip` specifies how many levels of stack to skip while getting caller
        name. skip=1 means "who calls me", skip=2 "who calls my caller" etc.
-
        An empty string is returned if skipped levels exceed stack height
     """
 
@@ -232,7 +225,6 @@ def stream(agent='', pline='', db='',objects=dict()):
       ol.query(db.table.develops="PHP") 
       
       results = ol.execute(single=True,last=True,serialized=True)
-
       
       return json.dumps(results)
 """
@@ -283,22 +275,6 @@ def execute(single=False,last=True, serialized=True):
 
   return result
  
-
-## network API layer to
-## a connection associatwed wwith ol.module
-  
-class MicroService(object):
-  def __init__(self,endpoint):
-    self.endpoint  =endpoint
-    self.http_connection =requests
-  def receiver(self,data):
-    self.http_connection.post(self.endpoint + "/" + "receiver", data=data)
-  def start(self,data):
-    self.http_connection.post(self.endpoint + "/" +"start", data=data) 
-  def end(self,data):
-    self.http_connection.post(self.endpoint +"/" +"end",data=data)
-
-
 def log_message(the_message):
   global DEFAULTS
   if DEFAULTS['debug_mode']:
@@ -864,7 +840,6 @@ look at the configuration for all this
 information. This module
 uses web2py's DAL to interface
 with the database
-
 """
 class storage(object):
     global _OL_DB 
@@ -1031,8 +1006,8 @@ class storage(object):
                       kw['primarykey'] = [j[0]]
                       has_auto_increment = 1
                     else:
-                      newField = make_field(j[0],j[1])
-                      args.append(newField)
+                      theField = make_field(j[0],j[2])
+                      args.append(theField)
 
               
 
@@ -1091,7 +1066,6 @@ class modules defines
 a base for internal modules
 usage they should all import this class
 to use module functionality
-
 This should be a wrapper around ws4py's
 Websocket
 """
@@ -1159,11 +1133,9 @@ class nodecollection(object):
 the pipeline object should
 cluster ol objects and run them
 with the needed functionality
-
 pipeline functionality should follow:
 foreach object in lineup
     run with objects
-
 each object must keep the initial
 properties intact
 """
@@ -1238,7 +1210,6 @@ class pipeline(object):
     the JSON message
     save all the default options to pass
     to each module.
-
     ** JSON switched to BSON
     If using JSON set interop option to 'json'
     TODO: recognize object based rules
@@ -1403,10 +1374,6 @@ class pipeline(object):
         except Exception, e:
           print e.__str__()
 
-
-        if 'microservice' in  self.config.keys():
-          bytes_json =  json.dumps(m)
-
         for i in client:
             ## trying to send to a dead client will not work
             try:
@@ -1497,6 +1464,7 @@ class echo(object):
                 message['data'][k]['confidence'] += 1
 
             return message['data']
+
 """
 geolocation module:
 all lookups in this 'must'
@@ -1543,8 +1511,8 @@ class geolocation(object):
         a minus
         where -50 20 = -70
         """
-        lat_minus = float(lat) - (range_)
-        lng_minus = float(lng) - (range_)
+        lat_minus = float(lat) + -(range_)
+        lng_minus = float(lng) + -(range_)
     
         """
         set attributes to a double type
@@ -1622,9 +1590,6 @@ class geolocation(object):
             q4.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") >= lat_minus)
             q4.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") >= lng)
             q4.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") <= lng_plus) 
-          
-              
-
 
 
             ## when lat is less than
@@ -1639,37 +1604,6 @@ class geolocation(object):
             ## also needs the
             ## range spec
             queriesf = []
-            testings = [dict(
-              minlat=lat,
-              maxlat=lat_plus,
-              minlng=lng,
-              maxlng=lng_plus,
-              operand1='>=',
-              operand2='<='
-            ),
-            dict(
-              minlat=lat,
-              maxlat=lat_plus,
-              minlng=lng,
-              maxlng=lng_minus,
-              operand1='>=',
-              operand2='<='
-      
-            ),
-            dict(
-              minlat=lat,
-              maxlat=lat_minus,
-              minlng=lng,
-              maxlng=lng_plus,
-              operand1='<=',
-              operand2='>='
-            )
-            ]
-            print testings
-            for i in testings:
-               print i
-               print "minlat: {0}, maxlat: {1},  minlng: {2}, maxlng: {3}\n operands: {4}, {5}".format(i['minlat'], i['maxlat'], i['minlng'],i['maxlng'], i['operand1'], i['operand2'])
-            
           
             q1f = reduce(lambda a,b:(a&b), q1)
             q2f = reduce(lambda a,b:(a&b), q2)
@@ -1680,12 +1614,10 @@ class geolocation(object):
             queriesf.append(q3f)
             queriesf.append(q4f)
             finalQuery = reduce(lambda a,b:(a|b), queriesf)
-            print "limit is:"
-            print self.limit
-
             
             rows = _OL_DB(finalQuery).select(limitby=(0,12))
             return rows.as_list()
+
 
         else:
             for k in range(0, len(message['data'])):
@@ -1725,7 +1657,6 @@ class geolocation(object):
 """
 sound object must satisfy the following
 conditions:
-
 1. All low level I/O is handled on the client end
 2. One descriptor must be attached to the sound object
 3. All queries must 'partially' match the full expression
