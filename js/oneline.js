@@ -184,8 +184,9 @@
             message['type'] =  event_type;
             message['data'] = {};
             // TODO no backwards captability should be present, in next version
-            for(var i in Object.keys(message)) {
-            message['data'][message[i]] = message[i];
+            var keys = Object.keys(message);
+            for(var i in keys) {
+            message['data'][keys[i]] = message[keys[i]]; 
             delete message[i];
             }
            }

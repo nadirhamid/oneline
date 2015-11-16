@@ -705,8 +705,8 @@ class server(object):
     global _OL_SERVER
 
     def __init__(self, 
-             host=DEFAULTS['host'], 
-             port=DEFAULTS['port'],
+             host=None,
+             port=None,
              path=DEFAULTS['path']):
 
         """
@@ -719,8 +719,14 @@ class server(object):
         config = scan_config("Main.conf")
         os.chdir(curr)
 
-        self.host = config['ol_host'] if 'ol_host' in config.keys() else "127.0.0.1"
-        self.port = int(config['ol_port']) if 'ol_port' in config.keys() else 9000
+        if not host:
+          self.host = config['ol_host'] if 'ol_host' in config.keys() else "127.0.0.1"
+        else:
+          self.host = host
+        if  not port:
+          self.port = int(config['ol_port']) if 'ol_port' in config.keys() else 9000
+        else:
+          self.port = port
         self.path = path 
         self.ssl = False
 
