@@ -1497,7 +1497,7 @@ class geolocation(object):
         lng = float(message['packet']['geo']['lng'])
         range_ = float(message['packet']['geo']['range'])
         if 'limit' in message['packet']['geo'].keys():
-          self.limit = message['packet']['geo']['limit']
+          self.limit = int(message['packet']['geo']['limit'])
 
         
         _OL_DB = self.storage.get()['db']
@@ -1621,7 +1621,7 @@ class geolocation(object):
             queriesf.append(q4f)
             finalQuery = reduce(lambda a,b:(a|b), queriesf)
             
-            rows = _OL_DB(finalQuery).select(limitby=(0,12))
+            rows = _OL_DB(finalQuery).select(limitby=(0,self.limit))
             return rows.as_list()
 
 
@@ -1867,6 +1867,7 @@ class event(object):
 
     def __init__(self):
         self.errors = []
+        self.limit = 12
 
     def log(self):
         name = self.__str__()
@@ -1885,7 +1886,8 @@ class event(object):
         _OL_TABLE = self.storage.get()['table']
 
         btype = "AND"
-        limit = 12 
+        if 'limit' in message['packet']['event'].keys():
+          self.limit = int(message['packet']['event']['limit'])
         page = 0
 
         log_message("entering: event module with:")
@@ -1947,11 +1949,11 @@ class event(object):
         
             if limit != 12:
               if page != 0:
-                rows = _OL_DB(query).select(limitby=(0, page + limit))
+                rows = _OL_DB(query).select(limitby=(0, page + self.limit))
               else: 
-                rows = _OL_DB(query).select(limitby=(0, limit))
+                rows = _OL_DB(query).select(limitby=(0, self.limit))
             else:
-              rows = _OL_DB(query).select(limitby=(0, limit))
+              rows = _OL_DB(query).select(limitby=(0, self.limit))
 
             return rows.as_list()
 

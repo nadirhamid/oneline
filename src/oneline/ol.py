@@ -162,7 +162,7 @@ def caller_name(skip=2):
 """
 scan the whole config aside from the
 database settings.  """
-def scan_config(caller):-->
+def scan_config(caller):
     config = dict()
     #conf = False
     config_file = ""
@@ -1497,7 +1497,7 @@ class geolocation(object):
         lng = float(message['packet']['geo']['lng'])
         range_ = float(message['packet']['geo']['range'])
         if 'limit' in message['packet']['geo'].keys():
-          self.limit = message['packet']['geo']['limit']
+          self.limit = int(message['packet']['geo']['limit'])
 
         
         _OL_DB = self.storage.get()['db']
@@ -1867,6 +1867,9 @@ class event(object):
 
     def __init__(self):
         self.errors = []
+        self.limit = 12
+        self.page = 0
+        self.btype = "AND"
 
     def log(self):
         name = self.__str__()
@@ -1884,8 +1887,9 @@ class event(object):
         _OL_DB = self.storage.get()['db']
         _OL_TABLE = self.storage.get()['table']
 
-        btype = "AND"
-        limit = 12 
+        self.btype = "AND"
+        if 'limit' in message['packet']['event'].keys():
+          self.limit = int(message['packet']['event']['limit'])
         page = 0
 
         log_message("entering: event module with:")
@@ -1900,13 +1904,13 @@ class event(object):
             ## reserveed keyword type
             ## needs to specify what operand we're going for
             if k == "type":
-              btype = v
+              self.btype = v
               continue
             if k == "limit":
-              limit = int(v)
+              self.limit = int(v)
               continue
             if k == "page":
-              page = limit * int(page)
+              self.page = int(v)
               continue
          
 
@@ -1940,18 +1944,18 @@ class event(object):
                 else: 
                     queries.append(getattr(getattr(_OL_DB, _OL_TABLE), i['key']) == i['value'])
 
-            if btype == 'AND':
+            if self.btype == 'AND':
               query = reduce(lambda a,b:(a&b),queries)
             else: 
               query = reduce(lambda a,b:(a|b),queries)
         
-            if limit != 12:
+            if self.limit != 12:
               if page != 0:
-                rows = _OL_DB(query).select(limitby=(0, page + limit))
+                rows = _OL_DB(query).select(limitby=(0, page + self.limit))
               else: 
-                rows = _OL_DB(query).select(limitby=(0, limit))
+                rows = _OL_DB(query).select(limitby=(0, self.limit))
             else:
-              rows = _OL_DB(query).select(limitby=(0, limit))
+              rows = _OL_DB(query).select(limitby=(0, self.limit))
 
             return rows.as_list()
 

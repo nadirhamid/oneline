@@ -36,6 +36,8 @@ class Runtime(object):
         self.removeOpt = False
         self.port = None
         self.ip = None
+        self.defport = 9000
+        self.defip = "127.0.0.1"
         self.serveropts = ['start', 'stop', 'restart', 'start_server', 'stop_server', 'start_forwarder']
         self.clientopts =['init', 'pack', 'remove', 'controller','list', 'edit']
         self.controlleractions =['init', 'restart','stop', 'clean']
@@ -113,7 +115,11 @@ class Runtime(object):
                 self.ui = True
             if i in ['--status']:
                 self.status = True
-                
+       
+
+        if (self.ip and not self.port) or (self.port and not self.ip):
+            print "When you supply --ip or --port  please supply both. oneline --ip {AN_IP} --port {A_PORT}"
+            return
             
         if 'help' in dir(self):
             self._help()
@@ -156,16 +162,19 @@ class Runtime(object):
         if 'ui' in dir(self):
             print "Attempting to start Oneline WebUI"
 
-            SERVERS = dict(host='server.socket_host', port='server.socket_port', path='tools.staticdir.root')
-            from oneline import ui
-            cherrypy.config.update({ SERVERS['host']: self.ip,
-            SERVERS['port']: self.port})
+            if not self.ip or not self.port:
+              print "Could not start the UI, you need to supply the --port and --ip options"
+            else:
+              SERVERS = dict(host='server.socket_host', port='server.socket_port', path='tools.staticdir.root')
+              from oneline import ui
+              cherrypy.config.update({ SERVERS['host']: self.ip,
+              SERVERS['port']: self.port})
 
-            SERVER = ui.OnelineUI(self.ip, self.port)
-            cherrypy.quickstart(SERVER, '')
+              SERVER = ui.OnelineUI(self.ip, self.port)
+              cherrypy.quickstart(SERVER, '')
 
-            print "Oneline UI running on {0}:{1}".format(self.ip, self.port)
-           
+              print "Oneline UI running on {0}:{1}".format(self.ip, self.port)
+             
         if 'edit' in dir(self):
           path = "/usr/local/oneline/modules/" +self.module + ".py"
           os.system("vim {0}".format(path))
@@ -487,13 +496,21 @@ def {0}_restart():
                 #from oneline import forward
                 #start_forwarder(self.ip, (self.port + 1))
             if 'start_server' in dir(self):
-                print "Starting oneline-websockets on port, ip: " + str(self.port) + ", " + self.ip
-                self.status = ol.server(self.ip, int(self.port)).start()
+                if self.port and self.ip:
+                  print "Starting oneline-websockets on port, ip: " + str(self.port) + ", " + self.ip
+                else:
+                  print "Starting oneline-websockets on port, ip: " + str(self.defport) + ", " + self.defip
+                self.status = ol.server(self.ip, self.port).start()
                  
             if 'start_forward' in dir(self): 
-                print "Starting oneline-xhr forwarder on port, ip: " + str(self.port+1) + ", " + self.ip
+                
                 from oneline import forward
-                forward.start_forwarder(self.ip, (self.port+1))
+                if self.port and self.ip:
+                  print "Starting oneline-xhr forwarder on port, ip: " + str(self.port+1) + ", " + self.ip
+                  forward.start_forwarder(self.ip, (self.port+1))
+                else:
+                  print "Starting oneline-xhr forwarder on port, ip: " +str(self.defport+1)+", "  + self.defip
+                  forward.start_forwarder(self.defip, (self.defport+1))
 
             if 'stop' in dir(self):
                 
