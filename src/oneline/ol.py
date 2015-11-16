@@ -1916,7 +1916,7 @@ class event(object):
             else:
                 opts.append(dict(key=k, value=v['value'], op=v['op']))
 
-        if not len(message['data']>0):
+        if not len(message['data'])>0:
 
             for i in opts:
 
