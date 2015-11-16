@@ -34,8 +34,8 @@ class Runtime(object):
         self.file =False
         self.remove = False
         self.removeOpt = False
-        self.port = 9000 
-        self.ip = "127.0.0.1"
+        self.port = None
+        self.ip = None
         self.serveropts = ['start', 'stop', 'restart', 'start_server', 'stop_server', 'start_forwarder']
         self.clientopts =['init', 'pack', 'remove', 'controller','list', 'edit']
         self.controlleractions =['init', 'restart','stop', 'clean']
@@ -481,7 +481,7 @@ def {0}_restart():
                 """ start as daemon or regular? """
                 os.system("oneline --start_forwarder > /dev/null 2>&1 &")
                 #os.system("oneline --start_server")
-                status = ol.server(self.ip,int(self.port)).start()
+                status = ol.server(self.ip,self.port).start()
                 self.status = status
                 """ start the forwarder as well """
                 #from oneline import forward

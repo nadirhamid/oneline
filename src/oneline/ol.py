@@ -162,7 +162,7 @@ def caller_name(skip=2):
 """
 scan the whole config aside from the
 database settings.  """
-def scan_config(caller):
+def scan_config(caller):-->
     config = dict()
     #conf = False
     config_file = ""
@@ -1621,7 +1621,7 @@ class geolocation(object):
             queriesf.append(q4f)
             finalQuery = reduce(lambda a,b:(a|b), queriesf)
             
-            rows = _OL_DB(finalQuery).select(limitby=(0,12))
+            rows = _OL_DB(finalQuery).select(limitby=(0,self.limit))
             return rows.as_list()
 
 
