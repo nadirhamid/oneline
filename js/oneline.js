@@ -752,7 +752,7 @@
                         O.oot = window['set' + O.runner](function() {
                             /* check if the prev
                              */ 
-                            if(O.objects.length>0) {
+                            if(O.objects.length>1) {
                               if (c !== 0 && O.objects[c - 1].state !== 1)
                                   return;
 
@@ -792,8 +792,8 @@
                           if(t >  Oneline.after) {
                           O.socket.send(O.interop.stringify(m_));
                           }
-                          O.running = 0;
                          window['clear' + O.runner](O.ooot);
+                          O.running = 0;
                       }
                   }, 1);
 

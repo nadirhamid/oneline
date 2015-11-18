@@ -32,7 +32,7 @@ from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
 from ws4py.websocket import WebSocket
 from ws4py.messaging import TextMessage
 
-DEFAULTS = dict(debug_mode=False, host='127.0.0.1', port=9000, path=os.path.abspath(os.path.join(os.path.dirname(__file__), 'static')))
+DEFAULTS = dict(debug_mode=True, host='127.0.0.1', port=9000, path=os.path.abspath(os.path.join(os.path.dirname(__file__), 'static')))
 SETTINGS = dict(table='', agent=[], nodes=[])
 SERVERS = dict(host='server.socket_host', port='server.socket_port', path='tools.staticdir.root', ssl_key='server.ssl_private_key', ssl_certificate='server.ssl_certificate')
 TABLE = ''
@@ -726,7 +726,7 @@ class server(object):
         if  not port:
           self.port = int(config['ol_port']) if 'ol_port' in config.keys() else 9000
         else:
-          self.port = port
+          self.port = int(port)
         self.path = path 
         self.ssl = False
 
@@ -1284,13 +1284,13 @@ class pipeline(object):
                 i.storage = storage
                 i.logger = self.logger
                 log_message("Entering: ")
-                log_message(m.__str__())
+                #log_message(m.__str__())
                 if c == 0:
                     m = i.run(m)
                 else:
                     m = i.run(self._append(m, p)) 
                 log_message("Leaving: ")
-                log_message(m.__str__())
+                #log_message(m.__str__())
                 c += 1
                 t += 1
               except Exception, e:
@@ -1376,7 +1376,10 @@ class pipeline(object):
             m = dict(data=[], good=True, asyncs=unicodeAll(asyncs), status=u'ok', response=unicodeAll(r), connection_uuid=unicodeReplace(connection_uuid), uuid=unicodeReplace(uuid), timestamp_request=int(timestamp), timestamp_response=_time.time())
        
         try:  
+          delta_start = _time.time()
           bytes = map(ord, bsonlib.dumps(m)).__str__()
+          delta_end = _time.time()
+          print "Encoding took: " + str(delta_end - delta_start)  + " seconds"
         except Exception, e:
           print e.__str__()
 
@@ -1390,7 +1393,8 @@ class pipeline(object):
               #self.logger.append(dict(addr='',object=self.__str__(), time=_time.time(), message="Lost a connection, message was not sent"))
               ## this should not happen when the module's stop function is called
               ## it will be implemented automatically in the newer release of oneline
-              cherrypy.engine.publish('del-client',i.dbunique)
+              pass
+              #cherrypy.engine.publish('del-client',i.dbunique)
      
         ## TODO 
         ## not correct way of calling a sleep function inside cherrypy use threaded version!
@@ -1868,6 +1872,8 @@ class event(object):
     def __init__(self):
         self.errors = []
         self.limit = 12
+        self.page = 0
+        self.btype = "AND"
 
     def log(self):
         name = self.__str__()
@@ -1885,13 +1891,14 @@ class event(object):
         _OL_DB = self.storage.get()['db']
         _OL_TABLE = self.storage.get()['table']
 
-        btype = "AND"
+        self.btype = "AND"
         if 'limit' in message['packet']['event'].keys():
           self.limit = int(message['packet']['event']['limit'])
         page = 0
 
         log_message("entering: event module with:")
         log_message(message.__str__())
+        delta_start = _time.time()
         reserved = ['limit', 'page', 'type']
 
         for k,v in message['packet']['event'].iteritems():
@@ -1902,13 +1909,13 @@ class event(object):
             ## reserveed keyword type
             ## needs to specify what operand we're going for
             if k == "type":
-              btype = v
+              self.btype = v
               continue
             if k == "limit":
-              limit = int(v)
+              self.limit = int(v)
               continue
             if k == "page":
-              page = limit * int(page)
+              self.page = int(v)
               continue
          
 
@@ -1942,12 +1949,12 @@ class event(object):
                 else: 
                     queries.append(getattr(getattr(_OL_DB, _OL_TABLE), i['key']) == i['value'])
 
-            if btype == 'AND':
+            if self.btype == 'AND':
               query = reduce(lambda a,b:(a&b),queries)
             else: 
               query = reduce(lambda a,b:(a|b),queries)
         
-            if limit != 12:
+            if self.limit != 12:
               if page != 0:
                 rows = _OL_DB(query).select(limitby=(0, page + self.limit))
               else: 
@@ -1955,6 +1962,8 @@ class event(object):
             else:
               rows = _OL_DB(query).select(limitby=(0, self.limit))
 
+            delta_end  =_time.time()
+            log_message("Request took " + str(delta_end - delta_start) + " seconds")
             return rows.as_list()
 
         else:
