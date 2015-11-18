@@ -340,13 +340,13 @@
             "default": "lng"
         },
         "every":  {
-          "default": 10.00
+          "default": 0.0
         },
         "limit": {
           "default": 512
         },
         "range": {
-          "default": 40.00
+          "default":40.00
         },
         "bidirectional": {
           "default": false
@@ -479,6 +479,7 @@
       obj.type = "geolocation";
       obj.signature = Oneline.signature;
       obj.options = Oneline.geolocation.options;
+      obj.last = { "lng": 0.0, "lat": 0.0 };
       Oneline.joinOrNew(obj);
       }
 
@@ -503,9 +504,33 @@
               var that = this;
               navigator.geolocation.getCurrentPosition(function(res) {
                   if(res.coords && typeof res.coords !==  'undefined') {
-                      that.m.geo.lat =  res.coords.latitude;
-                      that.m.geo.lng =  res.coords.longitude;
-                      that.state = 1;
+                      if(that.last.lng === 0.0 && that.last.lat ===0.0) { 
+                        that.last.lng =  res.coords.longitude;
+                        that.last.lat = res.coords.latitude;
+                      }
+                      if(that.last.lng>res.coords.longitude) {
+                          that.diff.lat= that.last.lng-res.coords.longitude;
+                      } else if (that.last.lng<res.coords.longtitude) {
+                          that.diff.lat = res.coords.longtitude-that.last.lng;
+                      } 
+                      if(that.last.lat>res.coords.latitude) {
+                          that.diff.lat= that.last.lat-res.coords.latitude;
+                      } else if (that.last.lat<res.coords.latitude) {
+                          that.diff.lat = res.coords.latitude-that.last.lat;
+                      }
+                      if (that.m.geo.every !== 0.0) {
+                        if(that.last.lat>=that.m.every || that.last.lng>=that.m.every) {
+                           that.last.lat = res.coords.latitude;
+                           that.last.lng = res.coords.longitude;
+                           that.m.geo.lat = res.coords.latitude;              
+                           that.m.geo.lng = res.coords.longitude;
+                           that.state = 1;
+                        }
+                      } else {
+                        that.m.geo.lat =  res.coords.latitude;
+                        that.m.geo.lng =  res.coords.longitude;
+                        that.state = 1;
+                      }
                     }
                   });
               }
