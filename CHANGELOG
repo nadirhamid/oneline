@@ -261,6 +261,18 @@ without having websocket support in the target browser
  - add async support on server
  - look over some command line things. Fixes
 
+0.9.5
+-----------------------------------------------------------
+
+ -  patches around server and client
+ -  add  "every" option to geolocation objects
+    Oneline.geolocation({
+         'every': 10.000, // update the geolocation results every 10.000 moved coordinates
+    });
+ -  other fixes, around command line tools
+
+
+
 
 
 
