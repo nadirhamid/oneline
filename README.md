@@ -98,7 +98,7 @@ Event examples
 To include the client side library
 -------------------------------------------------------------------------------------
 	from the CDN:
-	<script type="text/javascript" src="http://getoneline.com/lib/oneline-0.8.5.min.js">
+	<script type="text/javascript" src="http://getoneline.com/lib/oneline-1.0.0.min.js">
 
 
 	or locally
