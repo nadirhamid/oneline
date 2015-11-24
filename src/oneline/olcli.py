@@ -20,6 +20,15 @@ statusTrans = {
     psutil.STATUS_WAITING: "Waiting"
 }
     
+def get_restart_args_with(initial_args,new_arg):
+  newargs = []
+  for i in range(0,len(initial_args)):
+    if not initial_args[i]=="--restart":
+      newargs.append(initial_args[i])
+    else:
+      newargs.append(new_arg)
+
+  return newargs
 
 
 class Runtime(object):
@@ -550,10 +559,11 @@ def {0}_restart():
                 #os.system("pkill -f 'python /usr/bin/olcli.py'")
                 #os.system("pkill -f '/usr/bin/python /usr/bin/olcli.py'")
                 #os.system("oneline --start")
-                r1 = Runtime(['olcli.py', '--stop'])
-
-                print "Starting server"
-                r2 = Runtime(['olcli.py', '--start'])
+                args = get_restart_args_with(self.args,'--stop')
+                r1 = Runtime(args)
+                #if r1.status:
+                args = get_restart_args_with(self.args,'--start')
+                r2 = Runtime(args)
                 self.status = r2.status
                 #time.sleep(1)
                 #self.status = ol.server(self.ip, int(self.port)).start()
