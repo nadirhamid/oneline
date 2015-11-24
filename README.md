@@ -42,23 +42,23 @@ Geo Examples
 	Here's an example of my
 	Client side code:
 	
-	Oneline.setup({
-	   'host': document.location.host,
-	   'port': 9000, // the standard port oneline runs on
-	   'module': 'GeoMod'
-	});
-         Oneline.geolocation({
-            range: 0.0000050
-         });
-	Oneline.ready(function() {
-	   Oneline.pipeline(function(response) {
-	      if (response.data && response.good) {
-	         console.log(response.data); //the data
-	      } else { // something went wrong
-	         console.log(response);
-	      }
-	   }).run();
-	 });
+		Oneline.setup({		
+		   'host': document.location.host,
+		   'port': 9000, // the standard port oneline runs on
+	     	   'module': 'GeoMod'
+		});
+         	Oneline.geolocation({
+            	  range: 0.0000050
+         	});
+		Oneline.ready(function() {
+	   		Oneline.pipeline(function(response) {
+	      			if (response.data && response.good) {
+	         			console.log(response.data); //the data
+	      			} else { // something went wrong
+	         			console.log(response);
+	      			}
+	   		}).run();
+	 	});
 	 
 	And the server:
 	
@@ -83,20 +83,20 @@ Event examples
 
 1. Filter data every 2000 coords moved, afterwards further refine with a city
 
-   Oneline.geolocation({
-       'every': 2000
-   });
-   Oneline.event({
-      'city': Oneline.value('like', 'Montreal')
-   });
-   Oneline.ready(function() {
-     Oneline.pipeline(function(response) {
-        if (response.good && response.data) {
-           // got something
-           myApp.fillData(response.data);
-         }
-      }).run();
-    });
+		Oneline.geolocation({
+			'every': 2000
+		});
+		Oneline.event({
+			'city': Oneline.value('like', 'Montreal')
+		});
+		Oneline.ready(function() {
+			Oneline.pipeline(function(response) {
+				if (response.good && response.data) {
+				// got something
+					myApp.fillData(response.data);
+				}
+			}).run();
+		});
   
 
 
