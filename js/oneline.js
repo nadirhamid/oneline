@@ -642,9 +642,11 @@
               if(typeof Oneline.time.options.start !== 'undefined') {
                  this.m.time.start = Oneline.time.options.start;
                  this.m.time.end = Oneline.time.options.end;
+                 this.m.time.on =  Oneline.time.options.on;
               } else if (typeof Oneline.time.options.moment !== 'undefined') {
                 this.m.time.start = Oneline.time.options.moment.start;
                 this.m.time.end = Oneline.time.options.moment.end;
+                this.m.time.on = Oneline.time.options.moment.on;
               }
               this.m.time.sfield = Oneline.fetchOptional("time", "sfield", Oneline.time.options.sfield);
               this.m.time.efield = Oneline.fetchOptional("time", "efield", Oneline.time.options.efield);

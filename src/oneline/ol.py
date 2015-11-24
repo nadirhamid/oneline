@@ -1799,6 +1799,7 @@ class time(object):
             self.logger.append(dict(object=name, message=i))
 
     def run(self, message):
+        use_on = False
         start = int(message['packet']['time']['start'])
         end = int(message['packet']['time']['end'])
         if 'start_field'  in message['packet']['time'].keys():
@@ -1809,6 +1810,10 @@ class time(object):
           efield = message['packet']['time']['efield'] 
         else:
           efield = "etime"
+        if "on" in message['packet']['time'].keys():
+          use_on = True
+          use_on_field = message['packet']['time']['on']
+        
         _OL_DB = self.storage.get()['db']
         _OL_TABLE = self.storage.get()['table']
 
@@ -1833,10 +1838,14 @@ class time(object):
 
             queries = []
 
-            queries.append(getattr(getattr(_OL_DB, _OL_TABLE), sfield) >= start)
-            queries.append(getattr(getattr(_OL_DB, _OL_TABLE), efield) <= end)
-            queries.append(getattr(getattr(_OL_DB, _OL_TABLE), sfield) <= \
-                           getattr(getattr(_OL_DB, _OL_TABLE), efield))
+            if use_on:
+              queries.append(getattr(getattr(_OL_DB, _OL_TABLE), use_on_field)>= start)
+              queries.append(getattr(getattr(_OL_DB, _OL_TABLE), use_on_field)<= end)
+            else: 
+              queries.append(getattr(getattr(_OL_DB, _OL_TABLE), sfield) >= start)
+              queries.append(getattr(getattr(_OL_DB, _OL_TABLE), efield) <= end)
+              queries.append(getattr(getattr(_OL_DB, _OL_TABLE), sfield) <= \
+                             getattr(getattr(_OL_DB, _OL_TABLE), efield))
 
             query = reduce(lambda a,b:(a&b),queries)
             rows = _OL_DB(query).select()
