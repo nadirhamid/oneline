@@ -18,22 +18,15 @@ Getting Started (command line)
 
 Before anything you should:
 
-	bootstrap
+	make
 	
 this will install oneline and its dependancies. It will also start the oneline server if everything goes well.
-To do this seperatly you can use:
-
-	oneline --start
-
-
 
 To make a simple module, do:
 
 	oneline --init "my_module"
 
 This will create the needed files for writing your first oneline module.
-I will return to this after.
-
 
 Some Examples
 ========================================================
@@ -48,21 +41,25 @@ Geo Examples
 
 	Here's an example of my
 	Client side code:
-		
-		class GeoMod
-			opened: (message) ->
-				ol.settings(module: 'GeoMod')
-				geo = ol.geo(range: 50.030303)
-				
-				this.pipeline = ol.stream(pipeline: [geo])
-		     
-			receiver: (message) ->
-				this.pipeline.run(message)
-		
-			provider: (message) ->
-				this.pipeline.run(message)
-
 	
+	Oneline.setup({
+	   'host': document.location.host,
+	   'port': 9000, // the standard port oneline runs on
+	   'module': 'GeoMod'
+	});
+         Oneline.geolocation({
+            range: 0.0000050
+         });
+	Oneline.ready(function() {
+	   Oneline.pipeline(function(response) {
+	      if (response.data && response.good) {
+	         console.log(response.data); //the data
+	      } else { // something went wrong
+	         console.log(response);
+	      }
+	   }).run();
+	 });
+	 
 	And the server:
 	
 		from oneline import ol
@@ -86,12 +83,23 @@ Event examples
 
 1. Filter data every 2000 coords moved, afterwards further refine with a city
 
-		class MultiMod extends ol
-			opened: (message) ->
-				geo = ol.geo(every: 2000)
-				event = ol.event(city: 'Montreal')
-				                     
-				this.pipeline = ol.stream()
+   Oneline.geolocation({
+       'every': 2000
+   });
+   Oneline.event({
+      'city': Oneline.value('like', 'Montreal')
+   });
+   Oneline.ready(function() {
+     Oneline.pipeline(function(response) {
+        if (response.good && response.data) {
+           // got something
+           myApp.fillData(response.data);
+         }
+      }).run();
+    });
+  
+
+
 			
 
 	
@@ -142,10 +150,32 @@ key.
 5. Order is very important to oneline. In fact it retains all data from the first object
 used, afterwards refines according to its other objects. So while design is up to the
 programmer, I would definitely put it out there that this project's style is not commutative.
+More, oneline merits a 'confidence' rank for every result in a finding of data. This is how it works:
+
+Suppose we have 3 modules, namely: Geolocation, Time and Event
+
+If Geolocation matches a set of data the confidence level becomes one
+Next when the Time object matches a subset the confidence level for this set becomes two
+Finally when event matches a set of data its objects take three
+
+The result will be sorted by the highest confidence rank
+
+
+
+Now.. 
+============================================================================================
 
 You are now ready to write it's client code.  Client code
 is exactly like the server code minus the dom.  You will find I have included
 some examples in ./examples,  these should give you an idea as to how one works.
+
+When writing for the client it is important to use things like Oneline.ready/0 and
+Oneline.setup/1. These ensure our connections are setup correctly and under the hood
+also check for fallbacks like XHR. 
+
+
+
+
 
 ----------------------------------------------------------------------------------------
 
