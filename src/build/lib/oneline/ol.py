@@ -1804,11 +1804,11 @@ class time(object):
         if 'start_field'  in message['packet']['time'].keys():
           sfield =  message['packet']['time']['start_field']
         else:
-          sfield =  sfield
+          sfield =  "stime"
         if 'end_field' in message['packet']['time'].keys():
           efield = message['packet']['time']['efield'] 
         else:
-          efield = efield
+          efield = "etime"
         _OL_DB = self.storage.get()['db']
         _OL_TABLE = self.storage.get()['table']
 

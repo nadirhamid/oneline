@@ -271,24 +271,10 @@ without having websocket support in the target browser
     });
  -  other fixes, around command line tools
 
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
-
-
- 
-
-
-
-
+1.0.0-RC1
+----------------------------------------------------------
+ - first official release of oneline
+ - outlines all tools in the building for the last 10~20
+  releases
+ - patches any examples using V1, and recipes using V1. 
+ - first release candidate
