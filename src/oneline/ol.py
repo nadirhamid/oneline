@@ -1499,10 +1499,12 @@ class geolocation(object):
     def run(self, message):
         lat = float(message['packet']['geo']['lat'])
         lng = float(message['packet']['geo']['lng'])
+        join  = False
         range_ = float(message['packet']['geo']['range'])
         if 'limit' in message['packet']['geo'].keys():
           self.limit = int(message['packet']['geo']['limit'])
-
+        if 'join' in message['packet']['geo'].keys():
+          self.join = message['packet']['geo']['join'] 
         
         _OL_DB = self.storage.get()['db']
         _OL_TABLE = self.storage.get()['table']
@@ -1571,35 +1573,40 @@ class geolocation(object):
             q4 = []
          
 
+            table_attr = ""
+            if self.join and self.join['table']  !=  _OL_TABLE:
+              table_attr = getattr(_OL_DB, self.join['table'])
+            else:
+              table_attr = getattr(_OL_DB,_OL_TABLE)
             ##  
             ##
             ## forward
             ##
-            q1.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") >= lat) 
-            q1.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") <= lat_plus) 
-            q1.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") >= lng)
-            q1.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") <= lng_plus)
+            q1.append(getattr(table_attr, "lat") >= lat) 
+            q1.append(getattr(table_attr, "lat") <= lat_plus) 
+            q1.append(getattr(table_attr, "lng") >= lng)
+            q1.append(getattr(table_attr, "lng") <= lng_plus)
 
 
             ## northeast
             ##
-            q2.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") <= lat) 
-            q2.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") >= lat_minus)
-            q2.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") <= lng)
-            q2.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") >= lng_minus)
+            q2.append(getattr(table_attr, "lat") <= lat) 
+            q2.append(getattr(table_attr, "lat") >= lat_minus)
+            q2.append(getattr(table_attr, "lng") <= lng)
+            q2.append(getattr(table_attr, "lng") >= lng_minus)
 
             ##
             ##
             ##
-            q3.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") >= lat) 
-            q3.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") <= lat_plus)
-            q3.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") <= lng)
-            q3.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") >= lng_minus)
+            q3.append(getattr(table_attr, "lat") >= lat) 
+            q3.append(getattr(table_attr, "lat") <= lat_plus)
+            q3.append(getattr(table_attr, "lng") <= lng)
+            q3.append(getattr(table_attr, "lng") >= lng_minus)
 
-            q4.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") <= lat)
-            q4.append(getattr(getattr(_OL_DB, _OL_TABLE), "lat") >= lat_minus)
-            q4.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") >= lng)
-            q4.append(getattr(getattr(_OL_DB, _OL_TABLE), "lng") <= lng_plus) 
+            q4.append(getattr(table_attr, "lat") <= lat)
+            q4.append(getattr(table_attr, "lat") >= lat_minus)
+            q4.append(getattr(table_attr, "lng") >= lng)
+            q4.append(getattr(table_attr, "lng") <= lng_plus) 
 
 
             ## when lat is less than
@@ -1634,22 +1641,28 @@ class geolocation(object):
               """
               needs birectional checks
               """
-              expr1 = bool((float(message['data'][k]['lat']) >= lat) and \
-                    (float(message['data'][k]['lat']) <= lat_plus) and \
-                    (float(message['data'][k]['lng']) >= lng) and \
-                    (float(message['data'][k]['lng']) <= lng_plus)) 
-              expr2 = bool((float(message['data'][k]['lat']) <= lat) and \
-                      (float(message['data'][k]['lat']) >= lat_minus) and \
-                      (float(message['data'][k]['lng']) <= lng) and \
-                      (float(message['data'][k]['lng']) >= lng_minus))
-              expr3 = bool((float(message['data'][k]['lat']) >= lat) and \
-                      (float(message['data'][k]['lng']) <= lat_plus)
-                      (float(message['data'][k]['lng']) <= lng) and \
-                      (float(message['data'][k]['lng']) >= lng_minus))
-              expr4 = bool((float(message['data'][k]['lat']) <= lat) and \
-                      (float(message['data'][k]['lat']) >= lat_minus) and \
-                      (float(message['data'][k]['lng']) >= lng) and \
-                      (float(message['data'][k]['lng']) <= lng_plus))
+              if self.join and self.join['table']!=_OL_TABLE:
+                table = self.join['table']
+                the_object =message['data'][table][k]
+              else:
+                the_object = message['data'][k]
+              expr1 = bool((float(the_object['lat']) >= lat) and \
+                    (float(the_object['lat']) <= lat_plus) and \
+                    (float(the_object['lng']) >= lng) and \
+                    (float(the_object['lng']) <= lng_plus)) 
+              expr2 = bool((float(the_object['lat']) <= lat) and \
+                      (float(the_object['lat']) >= lat_minus) and \
+                      (float(the_object['lng']) <= lng) and \
+                      (float(the_object['lng']) >= lng_minus))
+              expr3 = bool((float(the_object['lat']) >= lat) and \
+                      (float(the_object['lng']) <= lat_plus)
+                      (float(the_object['lng']) <= lng) and \
+                      (float(the_object['lng']) >= lng_minus))
+              expr4 = bool((float(the_object['lat']) <= lat) and \
+                      (float(the_object['lat']) >= lat_minus) and \
+                      (float(the_object['lng']) >= lng) and \
+                      (float(the_object['lng']) <= lng_plus))
+
               
               if expr1 or expr2 or expr3 or expr4:
                   if not 'confidence' in message['data'][k].keys():
@@ -1896,7 +1909,7 @@ class event(object):
     def run(self, message):
         opts = []
         queries = []
-
+        join = False
         _OL_DB = self.storage.get()['db']
         _OL_TABLE = self.storage.get()['table']
 
@@ -1926,6 +1939,8 @@ class event(object):
             if k == "page":
               self.page = int(v)
               continue
+            if k == "join":
+              self.join = v
          
 
             if type(v) is list:
@@ -1939,37 +1954,47 @@ class event(object):
             for i in opts:
 
                 op = i['op']
-
+                if self.join:
+                  if i['table']:
+                    table_attr =  getattr(_OL_DB, i['table'])
+                  else:
+                    table_attr = getattr(_OL_DB,_OL_TABLE)
+                else:
+                  table_attr = getattr(_OL_DB,_OL_TABLE)
 
                 if op == '==':
-                    queries.append(getattr(getattr(_OL_DB, _OL_TABLE), i['key']) == i['value'])
+                    queries.append(getattr(table_attr, i['key']) == i['value'])
                 elif op == '>':
-                    queries.append(getattr(getattr(_OL_DB, _OL_TABLE), i['key']) > i['value'])
+                    queries.append(getattr(table_attr, i['key']) > i['value'])
                 elif op == '<':
-                    queries.append(getattr(getattr(_OL_DB, _OL_TABLE), i['key']) < i['value'])
+                    queries.append(getattr(table_attr, i['key']) < i['value'])
                 elif op == '>=':
-                    queries.append(getattr(getattr(_OL_DB, _OL_TABLE), i['key']) >= i['value'])
+                    queries.append(getattr(table_attr, i['key']) >= i['value'])
                 elif op == '<=':
-                    queries.append(getattr(getattr(_OL_DB, _OL_TABLE), i['key']) <= i['value'])
+                    queries.append(getattr(table_attr, i['key']) <= i['value'])
                 elif op == '!=':
-                    queries.append(getattr(getattr(_OL_DB, _OL_TABLE), i['key']) != i['value'])
+                    queries.append(getattr(table_attr, i['key']) != i['value'])
                 elif op == 'like':
-                    queries.append(getattr(getattr(_OL_DB, _OL_TABLE), i['key']).like('%' + i['value'] + '%'))
+                    queries.append(getattr(table_attr, i['key']).like('%' + i['value'] + '%'))
+                elif op  == 'not in':
+                    queries.append(~(getattr(table_attr, i['key']).belongs(i['value'])))
+                elif op == 'in':
+                    queries.append(getattr(table_attr,i['key']).belongs(i['value'])) 
                 else: 
-                    queries.append(getattr(getattr(_OL_DB, _OL_TABLE), i['key']) == i['value'])
-
+                    queries.append(getattr(table_attr, i['key']) == i['value'])
+        
+                    
             if self.btype == 'AND':
               query = reduce(lambda a,b:(a&b),queries)
             else: 
               query = reduce(lambda a,b:(a|b),queries)
-        
-            if self.limit != 12:
-              if page != 0:
-                rows = _OL_DB(query).select(limitby=(0, page + self.limit))
-              else: 
-                rows = _OL_DB(query).select(limitby=(0, self.limit))
+            limitopts =  {
+                  "limitby": (self.page, self.page+self.limit)
+            }
+            if join:
+              rows = _OL_DB(query, join=getattr(getattr(_OL_DB,_OL_TABLE),join['on'][0]) == getattr(getattr(_OL_DB,join['table']), join['on'][1])).select(**limitopts)
             else:
-              rows = _OL_DB(query).select(limitby=(0, self.limit))
+              rows = _OL_DB(query).select(**limitopts) 
 
             delta_end  =_time.time()
             log_message("Request took " + str(delta_end - delta_start) + " seconds")
@@ -1987,18 +2012,30 @@ class event(object):
                   """
                   olen = len(opts)
                   step = float(1) / float(olen)
+  
 
                   if not 'confidence' in message['data'][k].keys():
                           message['data'][k]['confidence'] = 1
 
                   for i in opts:
                       op = i['op']
+                      if  i['table']:
+                        the_key = message['data'][k][i['table']][i['key']]
+                      else:
+                        the_key = message['data'][k][i['key']]
+
 
                       if op == 'like':
-                          if len(re.findall('.*' + i['value'] + '.*', message['data'][k][i['key']])) > 0:
+                          if len(re.findall('.*' + i['value'] + '.*', the_key))>0:
                               message['data'][k]['confidence'] += step
+                      elif op == 'not in':
+                          if i['value'] not in the_key:
+                              message['data'][k]['confidence']  += step
+                      elif op == 'in':
+                          if i['value'] in the_key:
+                              message['data'][k]['confidence'] +=step
                       else:
-                          if OPS[op](message['data'][k][i['key']], i['value']):
+                          if OPS[op](the_key, i['value']):
                               message['data'][k]['confidence'] += step
 
             return message['data']  

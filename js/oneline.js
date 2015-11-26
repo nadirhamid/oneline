@@ -409,8 +409,27 @@
   };
   /* agent object for oneline
    * @class
+   *  set a hash  key to remember this client whenever it is called
    */
-  Oneline.agent = function(options) { };
+  Oneline.agent = function(options, ready) { 
+      if (!ready) {
+        var obj = clone(Oneline.agent(options,1));
+        obj.hashKey = Oneline.uuid();
+        localStorage.set("key", obj.hashKey);
+      }
+      return {
+         delete: function() {
+            if (typeof localStorage.get("key") !== "undefined") {
+               delete localStorage['key'];
+            }
+         },
+         run: function() {
+            this.m  = {};
+            this.m.hashKey = this.hashKey;
+            this.state = 1;
+         }
+      }
+  };
 
   /* nodes object
    * @class
