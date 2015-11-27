@@ -1,2 +1,2 @@
 echo "Trying to start oneline, if I don't start I will log.."
-python /usr/bin/olcli.py $@ > /dev/null 2>&1 &
+python /usr/bin/olcli.py --server $@ > /dev/null 2>&1 &
