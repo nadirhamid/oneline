@@ -184,6 +184,7 @@
         }
         m.timestamp = new Date().getTime();
         m.connection_uuid = O.connection_uuid;
+        m.module =  O.module;
         m.uuid = O.uuid();
         m.packet= {};
         m.packet.generic=innerMessage;
@@ -251,6 +252,7 @@
         Oneline.settings.server = options.server;
       else
         Oneline.settings.server = options.server = 'ws://' + Oneline.host + ':' + Oneline.port + '/' + options.server;
+      Oneline.module = options.server;
 
       if (OnelineTransport.WebSockets.detect()) {
       Oneline.socket = OnelineTransport.WebSockets.Ctor(Oneline.settings.server);
@@ -795,6 +797,7 @@
                            */
                           t = new Date().getTime();
                           m_.timestamp = t; 
+                          m_.module = O.module;
                           m_.uuid = O.uuid();
                           m_.connection_uuid = O.connection_uuid;
                           if(t >  Oneline.after) {

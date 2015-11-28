@@ -1243,6 +1243,7 @@ class pipeline(object):
         
         order = m['order']
         p = m['packet']
+        module = m['module']
 
         if self._objs == '':
             if len(order) > 0:
@@ -1370,10 +1371,10 @@ class pipeline(object):
        
         if len(m) > 0 and len(self._objs) > 0:
             data = unicodeAll(m) 
-            m = dict(data=m, good=True, asyncs=unicodeAll(asyncs),status=u'ok', response=unicodeAll(r), connection_uuid=unicodeReplace(connection_uuid), uuid=unicodeReplace(uuid), timestamp_request=int(timestamp), timestamp_response=_time.time())
+            m = dict(data=m, module=module, good=True, asyncs=unicodeAll(asyncs),status=u'ok', response=unicodeAll(r), connection_uuid=unicodeReplace(connection_uuid), uuid=unicodeReplace(uuid), timestamp_request=int(timestamp), timestamp_response=_time.time())
         else:
             ## this could be a generic only request, as a result do not deem this an error      
-            m = dict(data=[], good=True, asyncs=unicodeAll(asyncs), status=u'ok', response=unicodeAll(r), connection_uuid=unicodeReplace(connection_uuid), uuid=unicodeReplace(uuid), timestamp_request=int(timestamp), timestamp_response=_time.time())
+            m = dict(data=[], module=module, good=True, asyncs=unicodeAll(asyncs), status=u'ok', response=unicodeAll(r), connection_uuid=unicodeReplace(connection_uuid), uuid=unicodeReplace(uuid), timestamp_request=int(timestamp), timestamp_response=_time.time())
        
         try:  
           delta_start = _time.time()
