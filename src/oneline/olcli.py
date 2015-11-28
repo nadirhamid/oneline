@@ -41,14 +41,15 @@ class Runtime(object):
         self.controllerOpt = False
         self.controller = False
         self.file =False
+        self.rename = False
         self.remove = False
         self.removeOpt = False
         self.port = None
         self.ip = None
         self.defport = 9000
         self.defip = "127.0.0.1"
-        self.serveropts = ['start', 'stop', 'restart', 'start_server', 'stop_server', 'start_forwarder']
-        self.clientopts =['init', 'pack', 'remove', 'controller','list', 'edit']
+        self.serveropts = ['start', 'stop', 'restart', 'start_server', 'stop_server', 'start_forwarder', 'graceful']
+        self.clientopts =['init', 'pack', 'remove', 'controller','list', 'edit', 'rename']
         self.controlleractions =['init', 'restart','stop', 'clean']
         a = self.args
         if len(a) == 1:
@@ -79,6 +80,10 @@ class Runtime(object):
                 self.pack = True
                 if j != i:
                   self.file = j
+            if i in ['--rename', '-rn']:
+                self.rename =True
+                self.targetModule = j
+                self.sourceModule = k
             if i in ['init', '--init'] and not self.controllerOpt:
                 self.init = j 
             if i in ['remove', '--remove']:
@@ -204,8 +209,12 @@ class Runtime(object):
         """ where the status can be one of following """
         """ running, stopped, waiting """
         if 'status' in dir(self):
-            pass
-            
+          if  os.path.isfile('/usr/local/oneline/socket/oneline.pid.txt'):
+            contents =  open('/usr/local/oneline/socket/oneline.pid.txt').read()
+            if contents != "":
+              print "Oneline is currently running.."
+          else:
+            print "Oneline is shutoff"
 
         """
         pack needs to get the current directory
@@ -418,6 +427,55 @@ def {0}_restart():
                 print "All done! you can now start writing code"
                 #os.system("sudo ln -s " + 
 
+            if self.rename:
+              current_dir = self.get_mod_dir(self.targetModule)
+              previous_dir = os.getcwd()
+              if current_dir: 
+                os.chdir(current_dir) 
+       
+                files =  [
+                      './'+self.targetModule+'.py',
+                      './'+self.targetModule+'.conf',
+                      './'+self.targetModule+'.html',
+                      './'+self.targetModule+'_controller.py'
+                ]
+                tfiles = [
+                      './'+self.sourceModule+'.py',
+                      './'+self.sourceModule+'.conf',
+                      './'+self.sourceModule+'.html',
+                      './'+self.sourceModule+'_controller.py'
+                ]
+                for i in range(0,len(files)):     
+                  print "moving {0} -> {1}".format(files[i],tfiles[i])
+                  os.system("mv {0} {1}".format(files[i],tfiles[i]))  
+                symlinks = [
+                      './'+self.sourceModule+'.py',
+                      './'+self.sourceModule+'.conf',
+                      './'+self.sourceModule+'_controller.py',
+                      './'+'.oneline.seed' 
+                ]
+                sfiles = [
+                      '/usr/local/oneline/modules/'+self.targetModule+'.py',
+                      '/usr/local/oneline/conf/'+self.targetModule+'.conf',
+                      '/usr/local/oneline/controllers/'+self.targetModule+'_controller.py',
+                      '/usr/local/oneline/seeds/'+ self.targetModule
+                ]
+                stfiles = [
+                      '/usr/local/oneline/modules/'+self.sourceModule+'.py',
+                      '/usr/local/oneline/conf/'+self.sourceModule+'.conf',
+                      '/usr/local/oneline/controllers/'+self.sourceModule+'_controller.py',
+                      '/usr/local/oneline/seeds/'+ self.targetModule
+                ]
+                print "Moving symbolic links"
+                for i in range(0,len(sfiles)):
+                  print "moving link {0} -> {1}".format(sfiles[i], stfiles[i])
+                  os.system("rm -rf {0}".format(sfiles[i]))
+                  os.system("ln -s {0} {1}".format( symlinks[i], stfiles[i] ))
+          
+                print "{0} has been renamed to {1}".format(self.targetModule,self.sourceModule)
+    
+              
+                
             if self.removeOpt:
              
                 if not self.remove:    
@@ -594,23 +652,23 @@ options:
 
 
 CLIENT SPECIFIC
-init, --init     Create a new module
-init-stream      Link a stream to the home of streams (makes it accessible via: stream://)
--i, --info       Info on a module
--r, --remove     Permantly delete a module  
--l, --list       List of all available modules
--e, --edit       Edit a module by name
--p, --pack       Pack an existant module for use in oneline
+init, --init     Create a new module (oneline --init "my_module")
+-i, --info       Info on a module (oneline --info "my_module") 
+-r, --remove     Permantly delete a module  (oneline --remove "my_module")
+-l, --list       List of all available modules (oneline --list)
+-e, --edit       Edit a module by name (oneline --edit "my_module")
+-p, --pack       Pack an existant module for use in oneline (oneline --pack "my_module")
 --controller Control your oneline application
     options:
       oneline --controller stop
       oneline --controller start
       oneline --controller restart
+    customs:
+      oneline --controller "my_module" "a_custom_method"
 
 
 
 SERVER SPECIFIC
--g, --graceful  Perform a graceful shutdown
 -re, --restart  Restart the server
 -st, --start    Start the server
 -sp, --stop     Force a shutdown
