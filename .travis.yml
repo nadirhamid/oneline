@@ -1,2 +1,4 @@
 install:
-  - ./bootstrap
+  - cd ./src
+  - python setup.py build
+  - python setup.py install
