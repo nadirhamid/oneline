@@ -172,36 +172,23 @@
                
   // one time
   Oneline.once =   function(event_type, message) {
-           var m_ = {}; 
-           var packet = {};        
-    
-
-            if (typeof event_type === "object") {
-              packet[event_type.obj]  = {};
-              packet[event_type.obj]['type']  =  event_type.data.type;
-              packet[event_type.obj]['data'] = event_type.data.data;
-            } else {
-            message['type'] =  event_type;
-            message['data'] = {};
-            // TODO no backwards captability should be present, in next version
-            var keys = Object.keys(message);
-            for(var i in keys) {
-            message['data'][keys[i]] = message[keys[i]]; 
-            delete message[i];
-            }
-           }
-            packet["generic"]  = message;
-
-                          t = Date.now();
-                          m_.packet = packet; 
-                          m_.packet.order = [];
-                          m_.packet.interop = O.interop;
-                          m_.uuid = O.uuid();
-                          m_.timestamp = t;
-                          m_.connection_uuid = O.connection_uuid;
-        // wait for callback
+        // wait for callbacOneline.order;k
         // and the connection
-        Oneline.socket.send(Oneline.interop.stringify(m_));
+        var m= {};
+        var innerMessage = {};
+        var messageKeys =Object.keys(message); 
+        innerMessage['type']=event_type;
+        innerMessage['data'] = {};
+        for(var i in messageKeys) {
+          innerMessage['data'][messageKeys[i]]= message[messageKeys[i]];
+        }
+        m.timestamp = new Date().getTime();
+        m.connection_uuid = O.connection_uuid;
+        m.uuid = O.uuid();
+        m.packet= {};
+        m.packet.generic=innerMessage;
+
+        Oneline.socket.send(Oneline.interop.stringify(m));
   };
 
   Oneline.alwaysConnect  = function()  {  // always listen for the server, evenm when disconnected
@@ -799,7 +786,7 @@
                       }
 
                   O.ooot = window['set' + O.runner](function() {
-                      if (c === O.objects.length) {
+                      if (c === O.objects.length &&  O.objects.length> 0) {
 
                           m_.packet = m;
 
@@ -815,7 +802,11 @@
                           }
                          window['clear' + O.runner](O.ooot);
                           O.running = 0;
+                      } else {
+                         window['clear'+O.runner](O.ooot);
+                         O.running = 0;
                       }
+
                   }, 1);
 
               }, O.freq);
