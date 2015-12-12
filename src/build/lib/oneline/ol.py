@@ -1243,6 +1243,11 @@ class pipeline(object):
         
         order = m['order']
         p = m['packet']
+        ## any backwards compat
+        if 'module' in m.keys():
+          module = m['module'] 
+        else:
+          module = 'Unknown'
 
         if self._objs == '':
             if len(order) > 0:
@@ -1370,10 +1375,10 @@ class pipeline(object):
        
         if len(m) > 0 and len(self._objs) > 0:
             data = unicodeAll(m) 
-            m = dict(data=m, good=True, asyncs=unicodeAll(asyncs),status=u'ok', response=unicodeAll(r), connection_uuid=unicodeReplace(connection_uuid), uuid=unicodeReplace(uuid), timestamp_request=int(timestamp), timestamp_response=_time.time())
+            m = dict(data=m, module=module, good=True, asyncs=unicodeAll(asyncs),status=u'ok', response=unicodeAll(r), connection_uuid=unicodeReplace(connection_uuid), uuid=unicodeReplace(uuid), timestamp_request=int(timestamp), timestamp_response=_time.time())
         else:
             ## this could be a generic only request, as a result do not deem this an error      
-            m = dict(data=[], good=True, asyncs=unicodeAll(asyncs), status=u'ok', response=unicodeAll(r), connection_uuid=unicodeReplace(connection_uuid), uuid=unicodeReplace(uuid), timestamp_request=int(timestamp), timestamp_response=_time.time())
+            m = dict(data=[], module=module, good=True, asyncs=unicodeAll(asyncs), status=u'ok', response=unicodeAll(r), connection_uuid=unicodeReplace(connection_uuid), uuid=unicodeReplace(uuid), timestamp_request=int(timestamp), timestamp_response=_time.time())
        
         try:  
           delta_start = _time.time()
@@ -1487,6 +1492,7 @@ class geolocation(object):
         self.every = every
         self.range = 10
         self.limit = 100 
+        self.join = False
         self.last = 0
         self.errors = []
 
@@ -1895,6 +1901,7 @@ class event(object):
         self.errors = []
         self.limit = 12
         self.page = 0
+        self.join = False
         self.btype = "AND"
 
     def log(self):

@@ -548,7 +548,6 @@ def  signalStop(object):
   for i in range(0, len(clients)):
     if clients[i].unique == object.unique:
       log_message("removing client: " + clients[i].unique) 
-      log_message("removing client that has db uniquie: " +clients[i].dbunique)
       #del clients[i]
   
       #log_message("removing client: " + clients[i].unique)
@@ -1089,6 +1088,8 @@ class module(WebSocket):
             self.count = self.pipeline.storage.count
           except Exception, e:
             print e.__str__()
+        else:
+          log_message("You have not written a function for start/0 this function was void")
 
 
     def closed(self, *args):
@@ -1097,8 +1098,11 @@ class module(WebSocket):
           if 'end' in dir(self):
               
               return self.end()
+          else:
+            log_message("You have not written a function for end/0 this function was void")
         except Exception, e:
           print e.__str__()
+      
 
     def received_message(self, m):
         try:
@@ -1106,6 +1110,9 @@ class module(WebSocket):
               if isinstance(m,TextMessage):
                 m  =m.__str__()
               return self.receiver(request(parse(m)))
+          else:
+            log_message("You have not written a function for receiver/1 yet this function was void")
+
         except Exception, e:
           print e.__str__()
             
@@ -1243,7 +1250,11 @@ class pipeline(object):
         
         order = m['order']
         p = m['packet']
-        module = m['module']
+        ## any backwards compat
+        if 'module' in m.keys():
+          module = m['module'] 
+        else:
+          module = 'Unknown'
 
         if self._objs == '':
             if len(order) > 0:
@@ -1488,6 +1499,7 @@ class geolocation(object):
         self.every = every
         self.range = 10
         self.limit = 100 
+        self.join = False
         self.last = 0
         self.errors = []
 
@@ -1896,6 +1908,7 @@ class event(object):
         self.errors = []
         self.limit = 12
         self.page = 0
+        self.join = False
         self.btype = "AND"
 
     def log(self):
