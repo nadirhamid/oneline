@@ -1,3 +1,4 @@
+#! /bin/sh
 #########################################################################
 ## Oneline baseline setup this will install all the dependencies for
 ## the project. To run in conjunction with other databases
@@ -14,82 +15,119 @@
 ########################################################################
 
 ONELINE_BASE=$(pwd)
-CHERRYPY_LATEST='https://pypi.python.org/packages/source/C/CherryPy/CherryPy-3.2.4.tar.gz#md5=e2c8455e15c39c9d60e0393c264a4d16'
-WS4PY_LATEST='https://pypi.python.org/packages/source/w/ws4py/ws4py-0.3.4.tar.gz#md5=6b47e33cbd13f5c134b04f2a44a480ad'
-SETUP_TOOLS='https://bitbucket.org/pypa/setuptools/raw/bootstrap/ez_setup.py'
-rm -rf $ONELINE_BASE/lib/cherrypy
-rm -rf $ONELINE_BASE/lib/websocket
-
-cd $ONELINE_BASE/lib
-wget $CHERRYPY_LATEST
-tar xvf CherryPy*.tar.gz
-rm CherryPy*.tar.gz
-mv CherryPy* cherrypy
-chmod 755 cherrypy
-
-wget $WS4PY_LATEST
-tar xvf ws4py*.tar.gz
-rm ws4py*.tar.gz
-mv ws4py* websocket
-
-wget $SETUP_TOOLS -O - | sudo python
-rm $ONELINE_BASE/lib/setuptools*.zip
-
-cd $ONELINE_BASE/lib/bson/
-python ./setup.py build
-python ./setup.py install
-cd $ONELINE_BASE/lib/database/mysql-connector/
-python ./setup.py build
-python ./setup.py install
-cd $ONELINE_BASE/lib/database/postgres/
-python ./setup.py build
-python ./setup.py install 
-cd $ONELINE_BASE/lib/database/mongodb/
-python ./setup.py build
-python ./setup.py install
-cd $ONELINE_BASE/lib/websocket/
-python ./setup.py build
-python ./setup.py install
-cd $ONELINE_BASE/lib/mock/
-python ./setup.py build
-python ./setup.py install
-cd $ONELINE_BASE/lib/memcache/
-python ./setup.py build
-python ./setup.py install
-cd $ONELINE_BASE/lib/cherrypy 
-python ./setup.py build 
-python ./setup.py install
-
-########################################################################
-## Setup Oneline  
-## Assuming the location is at $ONELINE_BASE/src/
-########################################################################
-
-cd $ONELINE_BASE/src/
-python ./setup.py build
-python ./setup.py install
-
-# some cleanup before initial run
-cd $ONELINE_BASE/logs/
-rm -f *.log
-
-cd $ONELINE_BASE/modules/
-rm -f *.pyc
-
-cd $ONELINE_BASE/socket/
-rm -f *.pid
+HAS_PIP=0
+HAS_PYTHON=0
+PYTHON_COMPILER=""
+PIP_INSTALL=""
+if    test -f /usr/bin/python2.7  ; then
+    PYTHON_COMPILER="/usr/bin/python2.7"
+    HAS_PYTHON=1
+else 
+   if   test -f /usr/bin/python  ; then
+      PYTHON_COMPILER="/usr/bin/python"
+      HAS_PYTHON=1
+   fi
+fi
+if test -f /usr/bin/pip ; then
+  PIP_INSTALL="/usr/bin/pip"
+  HAS_PIP=1
+else 
+  if test -f /usr/local/bin/pip ; then
+    PIP_INSTALL="/usr/local/bin/pip"
+    HAS_PIP=1
+  fi
+fi
 
 
-########################################################################
-## Finally start  
-## the server 
-########################################################################
-cd $ONELINE_BASE
-export ONELINE_BASE=$(pwd)
 
-cd $ONELINE_BASE/bin/
-rm -f /usr/bin/onelined
-cp ./onelined /usr/bin/
-oneline --start
 
-echo "Remember to run oneline-forward if you plan on using XHR to WebSocket fallback"
+
+if  test $HAS_PIP -ne 0  ; then
+  if  test $HAS_PYTHON -ne 0   ; then 
+    $PIP_INSTALL install -r requirements.txt
+
+    #CHERRYPY_LATEST='https://pypi.python.org/packages/source/C/CherryPy/CherryPy-3.2.4.tar.gz#md5=e2c8455e15c39c9d60e0393c264a4d16'
+    #WS4PY_LATEST='https://pypi.python.org/packages/source/w/ws4py/ws4py-0.3.4.tar.gz#md5=6b47e33cbd13f5c134b04f2a44a480ad'
+    #SETUP_TOOLS='https://bitbucket.org/pypa/setuptools/raw/bootstrap/ez_setup.py'
+    #rm -rf $ONELINE_BASE/lib/cherrypy
+    #rm -rf $ONELINE_BASE/lib/websocket
+
+    #cd $ONELINE_BASE/lib
+    #wget $CHERRYPY_LATEST
+    #tar xvf CherryPy*.tar.gz
+    #rm CherryPy*.tar.gz
+    #mv CherryPy* cherrypy
+    #chmod 755 cherrypy
+
+    #wget $WS4PY_LATEST
+    #tar xvf ws4py*.tar.gz
+    #rm ws4py*.tar.gz
+    #mv ws4py* websocket
+
+    #wget $SETUP_TOOLS -O - | sudo python
+    #rm $ONELINE_BASE/lib/setuptools*.zip
+
+    cd $ONELINE_BASE/lib/bson/
+    $PYTHON_COMPILER ./setup.py build
+    $PYTHON_COMPILER ./setup.py install
+    #cd $ONELINE_BASE/lib/database/mysql-connector/
+    #python ./setup.py build
+    #python ./setup.py install
+    #cd $ONELINE_BASE/lib/database/postgres/
+    #python ./setup.py build
+    #python ./setup.py install 
+    #cd $ONELINE_BASE/lib/database/mongodb/
+    #python ./setup.py build
+    #python ./setup.py install
+    #cd $ONELINE_BASE/lib/websocket/
+    #python ./setup.py build
+    #python ./setup.py install
+    #cd $ONELINE_BASE/lib/mock/
+    #python ./setup.py build
+    #python ./setup.py install
+    #cd $ONELINE_BASE/lib/memcache/
+    #python ./setup.py build
+    #python ./setup.py install
+    #cd $ONELINE_BASE/lib/cherrypy 
+    #python ./setup.py build 
+    #python ./setup.py install
+
+    ########################################################################
+    ## Setup Oneline  
+    ## Assuming the location is at $ONELINE_BASE/src/
+    ########################################################################
+
+    cd $ONELINE_BASE/src/
+    $PYTHON_COMPILER ./setup.py build
+    $PYTHON_COMPILER ./setup.py install
+
+    # some cleanup before initial run
+    cd $ONELINE_BASE/logs/
+    rm -f *.log
+
+    cd $ONELINE_BASE/modules/
+    rm -f *.pyc
+
+    cd $ONELINE_BASE/socket/
+    rm -f *.pid
+
+
+    ########################################################################
+    ## Finally start  
+    ## the server 
+    ########################################################################
+    cd $ONELINE_BASE
+    export ONELINE_BASE=$(pwd)
+
+    cd $ONELINE_BASE/bin/
+    rm -f /usr/bin/onelined
+    cp ./onelined /usr/bin/
+    oneline --start
+
+    echo "Remember to run oneline-forward if you plan on using XHR to WebSocket fallback"
+  else
+    echo "Please install Python 2.7 it is needed to make Oneline"
+  fi
+else
+  echo "You must install PIP in order to install Oneline"
+fi
