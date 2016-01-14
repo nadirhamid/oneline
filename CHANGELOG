@@ -278,3 +278,10 @@ without having websocket support in the target browser
   releases
  - patches any examples using V1, and recipes using V1. 
  - first release candidate
+
+1.0.0-RC2
+----------------------------------------------------------
+  - rewrite bootstrap for using pip and not the internal bootstrap
+   script 
+
+
