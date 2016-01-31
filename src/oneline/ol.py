@@ -10,14 +10,14 @@ import array
 import thread
 import weakref
 import string
-import memcache
+#import memcache
 import socket
 import datetime
 import os
 import re
 import sys
 import cherrypy
-import requests
+#import requests
 import uuid
 import random as _random
 import time as _time
