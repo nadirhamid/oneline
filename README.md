@@ -1,6 +1,6 @@
 Oneline  (A Python Project)
 =========================================================
-![alt tag](http://getoneline.com/assets/logo.png)
+![alt tag](http://getoneline.com/img/logo.png)
 
 Oneline adds real time streaming to your web app's data
 
