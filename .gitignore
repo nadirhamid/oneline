@@ -27,6 +27,7 @@ seeds/*
 src/*
 src/oneline/*.pyc
 src/oneline/.*
+src/oneline/build/
 src/dist/
 !src/oneline/
 !src/setup.py
